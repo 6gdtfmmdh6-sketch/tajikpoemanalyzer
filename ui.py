@@ -755,7 +755,8 @@ def collect_volume_metadata():
             "source_type": source_type,
             "notes": notes if notes else None
         }
-        def display_library_management(all_results: List[Dict[str, Any]]):
+        
+def display_library_management(all_results: List[Dict[str, Any]]):
     """Display library management section"""
     st.markdown("---")
     st.header("📚 Library & Corpus Management")
