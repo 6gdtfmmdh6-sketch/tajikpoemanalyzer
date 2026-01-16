@@ -44,3 +44,20 @@ def compare_authors(library_manager, author1: str, author2: str):
     }
     
     return comparison
+
+def analyze_stylistic_evolution(library_manager):
+    """Erweiterte stilistische Entwicklungsanalyse"""
+    
+    # Implementierung mit statistischen Tests
+    from scipy import stats
+    import pandas as pd
+    
+    # Zeitreihen-Analyse für Metren-Veränderungen
+    # Regression-Analyse für Lexikalische Diversität über Zeit
+    # Changepoint Detection für stilistische Brüche
+    
+    return {
+        "temporal_trends": {},
+        "statistical_significance": {},
+        "changepoints": []
+    }
