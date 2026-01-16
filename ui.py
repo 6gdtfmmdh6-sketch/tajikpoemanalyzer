@@ -2,8 +2,12 @@
 """
 Simple Web-UI for Tajik Poetry Analyzer
 Supports PDF upload and analysis
+
+This version integrates the enhanced_tajik_analyzer module for:
+- Classical ʿArūḍ meter analysis (16 meters)
+- Advanced rhyme detection (Qāfiyeh/Radīf)
+- Scientific validation and confidence scoring
 """
-from app2 import TajikPoemAnalyzer, AnalysisConfig, PoemData, EnhancedPoemSplitter
 import streamlit as st
 from pathlib import Path
 import tempfile
@@ -12,12 +16,25 @@ import re
 from typing import List, Optional
 import logging
 
-# Import original analyzer
+# Import base analyzer
 try:
     from app2 import TajikPoemAnalyzer, AnalysisConfig, PoemData
 except ImportError:
     st.error("Error: Could not import TajikPoemAnalyzer. Please ensure app2.py is in the same directory.")
     st.stop()
+
+# Import enhanced analyzer with ʿArūḍ support
+USE_ENHANCED_ANALYZER = False
+try:
+    from enhanced_tajik_analyzer import (
+        EnhancedTajikPoemAnalyzer,
+        AruzMeterAnalyzer,
+        AdvancedRhymeAnalyzer,
+        MeterConfidence
+    )
+    USE_ENHANCED_ANALYZER = True
+except ImportError:
+    st.warning("Enhanced analyzer not available. Using basic analyzer.")
 
 try:
     from pdf_handler import read_file_with_pdf_support
@@ -147,9 +164,20 @@ class EnhancedPoemSplitter:
 # -------------------------------------------------------------------
 @st.cache_resource
 def load_analyzer():
-    """Initialize analyzer (cached)"""
+    """Initialize analyzer (cached)
+    
+    Uses EnhancedTajikPoemAnalyzer if available, otherwise falls back to basic.
+    """
     config = AnalysisConfig(lexicon_path='data/tajik_lexicon.json')
-    return TajikPoemAnalyzer(config=config)
+    
+    if USE_ENHANCED_ANALYZER:
+        try:
+            return EnhancedTajikPoemAnalyzer(config=config)
+        except Exception as e:
+            logger.warning(f"Failed to load enhanced analyzer: {e}. Using basic.")
+            return TajikPoemAnalyzer(config=config)
+    else:
+        return TajikPoemAnalyzer(config=config)
 
 def split_poems_auto(text: str) -> list:
     """Split text into poems automatically"""
@@ -207,11 +235,25 @@ def main():
         st.header("Info")
         st.write("Scientific analysis of Tajik/Persian poetry")
         st.markdown("---")
-        st.write("**Features:**")
-        st.write("- Aruz metric analysis")
-        st.write("- Rhyme scheme detection")
-        st.write("- Phonetic transcription")
-        st.write("- Thematic analysis")
+        
+        # Show analyzer status
+        if USE_ENHANCED_ANALYZER:
+            st.success("✅ Enhanced Analyzer Active")
+            st.write("**Features:**")
+            st.write("- 16 classical ʿArūḍ meters")
+            st.write("- Qāfiyeh/Radīf detection")
+            st.write("- Phonetic transcription")
+            st.write("- Syllable weight analysis")
+            st.write("- Scientific validation")
+            st.write("- Confidence scoring")
+        else:
+            st.warning("⚠️ Basic Analyzer")
+            st.write("**Features:**")
+            st.write("- Basic meter detection")
+            st.write("- Rhyme scheme detection")
+            st.write("- Thematic analysis")
+        
+        st.markdown("---")
         st.write("- PDF & OCR support")
 
     # Main area
