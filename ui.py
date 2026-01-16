@@ -183,9 +183,10 @@ def split_text_at_indices(text: str, split_indices: List[int]) -> List[str]:
 def display_results(analysis, poem_num: int, poem_text: str):
     """Display analysis results"""
     structural = analysis.structural
+    content = analysis.content
     validation = analysis.quality_metrics
     
-    with st.expander(f"📜 Poem {poem_num} - {len(poem_text.split())} words", expanded=True):
+    with st.expander(f"📜 Poem {poem_num} - {content.total_words} words", expanded=True):
         # Content
         st.subheader("Content")
         st.text(poem_text[:500] + "..." if len(poem_text) > 500 else poem_text)
@@ -230,6 +231,43 @@ def display_results(analysis, poem_num: int, poem_text: str):
         
         with col2:
             st.write(f"**Rhyme Pattern:** {structural.rhyme_pattern}")
+        
+        st.markdown("---")
+        
+        # Content Analysis (NEW!)
+        st.subheader("📚 Content Analysis")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Words", content.total_words)
+            st.metric("Unique Words", content.unique_words)
+        
+        with col2:
+            st.metric("Lexical Diversity", f"{content.lexical_diversity:.1%}")
+            st.metric("Register", content.stylistic_register.title())
+        
+        with col3:
+            st.metric("Neologisms", len(content.neologisms))
+            st.metric("Archaisms", len(content.archaisms))
+        
+        # Word Frequencies
+        if content.word_frequencies:
+            st.write("**Top Words:**")
+            top_words = ", ".join([f"{w}({c})" for w, c in content.word_frequencies[:10]])
+            st.write(top_words)
+        
+        # Neologisms
+        if content.neologisms:
+            st.write(f"**Neologisms:** {', '.join(content.neologisms[:10])}")
+        
+        # Archaisms
+        if content.archaisms:
+            st.write(f"**Archaisms:** {', '.join(content.archaisms)}")
+        
+        # Themes
+        active_themes = [k for k, v in content.theme_distribution.items() if v > 0]
+        if active_themes:
+            st.write(f"**Themes:** {', '.join(active_themes)}")
         
         st.markdown("---")
         

@@ -160,6 +160,19 @@ class StructuralAnalysis:
 
 
 @dataclass
+class ContentAnalysis:
+    """Content analysis results including lexical features"""
+    word_frequencies: List[Tuple[str, int]]
+    neologisms: List[str]
+    archaisms: List[str]
+    theme_distribution: Dict[str, int]
+    lexical_diversity: float
+    stylistic_register: str
+    total_words: int
+    unique_words: int
+
+
+@dataclass
 class LiteraryAssessment:
     """Multi-perspective literary assessment"""
     german_perspective: int
@@ -172,6 +185,7 @@ class LiteraryAssessment:
 class ComprehensiveAnalysis:
     """Complete analysis results"""
     structural: StructuralAnalysis
+    content: ContentAnalysis
     literary: LiteraryAssessment
     quality_metrics: Dict[str, float]
 
@@ -867,6 +881,160 @@ class StructuralAnalyzer:
 
 
 # =============================================================================
+# CONTENT ANALYZER (Lexicon, Neologisms, Themes)
+# =============================================================================
+
+class ContentAnalyzer:
+    """Enhanced content analyzer with lexicon support and neologism detection"""
+
+    def __init__(self, config: Optional[AnalysisConfig] = None):
+        self.config = config or AnalysisConfig()
+        self.lexicon = self._load_lexicon()
+        
+        # Define archaic words (classical Persian/Tajik)
+        self.archaisms = {
+            'зи', 'ки', 'чу', 'зеро', 'балки', 'андар', 'бар', 'аз-ан-ки',
+            'ҳамана', 'бадин', 'бад-он', 'з-он', 'к-он', 'чунон', 'чунин',
+            'инак', 'онак', 'биҳишт', 'дӯзах', 'фалак', 'қазо', 'қадар'
+        }
+        
+        logger.info(f"ContentAnalyzer initialized with {len(self.lexicon)} lexicon entries")
+
+    def _load_lexicon(self) -> Set[str]:
+        """Load lexicon from configured file path"""
+        try:
+            lexicon_path = Path(self.config.lexicon_path)
+            if lexicon_path.exists():
+                with open(lexicon_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    # Handle both list and dict formats
+                    if isinstance(data, list):
+                        return set(word.lower() for word in data)
+                    elif isinstance(data, dict):
+                        return set(word.lower() for word in data.keys())
+                    return set()
+            else:
+                logger.warning(f"Lexicon file not found at: {lexicon_path}")
+        except Exception as e:
+            logger.error(f"Error loading lexicon: {e}")
+        return set()
+
+    def analyze(self, poem_content: str) -> ContentAnalysis:
+        """Comprehensive content analysis"""
+        # Extract words
+        words = re.findall(r'[\wӣӯ]+', poem_content.lower())
+        word_freq = Counter(words)
+        
+        # Find neologisms and archaisms
+        neologisms = self._find_neologisms(words)
+        archaisms = self._find_archaisms(words)
+        
+        # Analyze themes
+        theme_distribution = self._analyze_themes(words)
+        
+        # Calculate lexical diversity (Type-Token Ratio)
+        total_words = len(words)
+        unique_words = len(set(words))
+        lexical_diversity = unique_words / total_words if total_words > 0 else 0
+        
+        # Determine stylistic register
+        stylistic_register = self._determine_register(words, archaisms, neologisms)
+        
+        return ContentAnalysis(
+            word_frequencies=word_freq.most_common(20),
+            neologisms=neologisms[:self.config.max_neologisms],
+            archaisms=list(archaisms),
+            theme_distribution=theme_distribution,
+            lexical_diversity=round(lexical_diversity, 3),
+            stylistic_register=stylistic_register,
+            total_words=total_words,
+            unique_words=unique_words
+        )
+
+    def _find_neologisms(self, words: List[str]) -> List[str]:
+        """Find neologisms (words not in standard lexicon)"""
+        if not self.lexicon:
+            logger.warning("No lexicon loaded - neologism detection disabled")
+            return []
+        
+        neologisms = []
+        for word in set(words):
+            if word not in self.lexicon and word not in self.archaisms:
+                # Filter out numbers and very short words
+                if not word.isdigit() and len(word) > 2:
+                    neologisms.append(word)
+        
+        return sorted(neologisms)
+
+    def _find_archaisms(self, words: List[str]) -> Set[str]:
+        """Find archaic words"""
+        return set(word for word in words if word in self.archaisms)
+
+    def _analyze_themes(self, words: List[str]) -> Dict[str, int]:
+        """Analyze thematic distribution"""
+        theme_counts = {}
+        
+        for theme, keywords in self.config.themes.items():
+            count = sum(1 for word in words if word in keywords)
+            theme_counts[theme] = count
+        
+        return theme_counts
+
+    def _determine_register(self, words: List[str], archaisms: Set[str],
+                           neologisms: List[str]) -> str:
+        """Determine stylistic register"""
+        total_words = len(words)
+        
+        if not total_words:
+            return "unknown"
+        
+        archaic_ratio = len(archaisms) / total_words
+        neologism_ratio = len(neologisms) / total_words
+        
+        if archaic_ratio > 0.05:
+            return "classical"
+        elif neologism_ratio > 0.05:
+            return "modern"
+        elif archaic_ratio > 0.02 and neologism_ratio < 0.02:
+            return "neo-classical"
+        else:
+            return "contemporary"
+
+    def build_vocabulary_from_corpus(self, corpus_path: str) -> Dict[str, int]:
+        """Build vocabulary dictionary from corpus file"""
+        vocabulary = Counter()
+        
+        try:
+            corpus_file = Path(corpus_path)
+            if not corpus_file.exists():
+                logger.error(f"Corpus file not found: {corpus_path}")
+                return {}
+            
+            logger.info(f"Building vocabulary from {corpus_path}...")
+            
+            with open(corpus_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    words = re.findall(r'[\wӣӯ]+', line.lower())
+                    vocabulary.update(words)
+            
+            logger.info(f"Built vocabulary with {len(vocabulary)} unique words")
+            return dict(vocabulary)
+            
+        except Exception as e:
+            logger.error(f"Error building vocabulary: {e}")
+            return {}
+
+    def save_vocabulary(self, vocabulary: Dict[str, int], output_path: str):
+        """Save vocabulary to JSON file"""
+        try:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(vocabulary, f, ensure_ascii=False, indent=2)
+            logger.info(f"Vocabulary saved to {output_path}")
+        except Exception as e:
+            logger.error(f"Error saving vocabulary: {e}")
+
+
+# =============================================================================
 # POEM SPLITTER
 # =============================================================================
 
@@ -939,8 +1107,8 @@ class LiteraryAssessor:
     """Multi-perspective literary assessment"""
 
     @staticmethod
-    def assess(structural: StructuralAnalysis) -> LiteraryAssessment:
-        """Literary assessment based on structural analysis"""
+    def assess(structural: StructuralAnalysis, content: Optional[ContentAnalysis] = None) -> LiteraryAssessment:
+        """Literary assessment based on structural and content analysis"""
 
         # German perspective - formal perfection
         german_score = 0
@@ -959,6 +1127,9 @@ class LiteraryAssessor:
             persian_score += 2
         if structural.prosodic_consistency > 0.7:
             persian_score += 1
+        # Bonus for classical register
+        if content and content.stylistic_register in ['classical', 'neo-classical']:
+            persian_score += 1
 
         # Tajik elements
         tajik_score = 0
@@ -966,6 +1137,9 @@ class LiteraryAssessor:
             tajik_score += 1
         if structural.stanza_structure in ['ghazal', 'rubaiyat']:
             tajik_score += 2
+        # Bonus for homeland themes
+        if content:
+            tajik_score += min(2, content.theme_distribution.get('Homeland', 0))
 
         # Modernist features
         modern_score = 0
@@ -973,6 +1147,12 @@ class LiteraryAssessor:
             modern_score += 2
         if structural.prosodic_consistency < 0.5:
             modern_score += 1
+        # Bonus for neologisms and high lexical diversity
+        if content:
+            if len(content.neologisms) > 3:
+                modern_score += 1
+            if content.lexical_diversity > 0.7:
+                modern_score += 1
 
         return LiteraryAssessment(
             german_perspective=min(5, german_score),
@@ -1174,6 +1354,7 @@ class TajikPoemAnalyzer:
     def __init__(self, config: Optional[AnalysisConfig] = None):
         self.config = config or AnalysisConfig()
         self.structural_analyzer = StructuralAnalyzer(self.config)
+        self.content_analyzer = ContentAnalyzer(self.config)
         self.excel_reporter = ExcelReporter()
 
         logger.info("TajikPoemAnalyzer initialized")
@@ -1184,10 +1365,12 @@ class TajikPoemAnalyzer:
             raise ValueError("Poem content is too short or empty")
 
         structural = self.structural_analyzer.analyze(poem_content)
-        literary = LiteraryAssessor.assess(structural)
+        content = self.content_analyzer.analyze(poem_content)
+        literary = LiteraryAssessor.assess(structural, content)
 
         analysis = ComprehensiveAnalysis(
             structural=structural,
+            content=content,
             literary=literary,
             quality_metrics={}
         )
@@ -1196,6 +1379,14 @@ class TajikPoemAnalyzer:
         analysis.quality_metrics = validation
 
         return analysis
+    
+    def build_corpus_vocabulary(self, corpus_path: str = 'data/tajik_corpus.txt',
+                                output_path: str = 'data/corpus_vocabulary.json') -> Dict[str, int]:
+        """Build vocabulary from corpus and save it"""
+        vocab = self.content_analyzer.build_vocabulary_from_corpus(corpus_path)
+        if vocab:
+            self.content_analyzer.save_vocabulary(vocab, output_path)
+        return vocab
 
     def analyze_text(self, text: str) -> List[Dict[str, Any]]:
         """Analyze text containing multiple poems"""
