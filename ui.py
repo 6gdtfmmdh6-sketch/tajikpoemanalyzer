@@ -281,7 +281,7 @@ def main():
                         for i, line in enumerate(st.session_state.all_lines):
                             # Add a marked splitter if this index is in the splitter list
                             if i in st.session_state.splitters:
-                                display_text += f"\n--- 🟥 **SPLITTER** (before line {i+1}) ---\n"
+                                display_text += f"\n--- **SPLITTER** (before line {i+1}) ---\n"
                             display_text += line + "\n"
                         st.text_area("Preview", display_text, height=400, key="display_area")
                     
@@ -303,17 +303,17 @@ def main():
                         col_add_remove, col_clear = st.columns(2)
                         with col_add_remove:
                             if selected_position in current_splitters:
-                                if st.button("❌ Remove splitter"):
+                                if st.button("Remove splitter"):
                                     st.session_state.splitters.remove(selected_position)
                                     st.rerun()
                             else:
-                                if st.button("✅ Add splitter"):
+                                if st.button("Add splitter"):
                                     st.session_state.splitters.append(selected_position)
                                     st.session_state.splitters.sort()
                                     st.rerun()
                         
                         with col_clear:
-                            if st.button("🗑️ Clear all"):
+                            if st.button("Clear all"):
                                 st.session_state.splitters = []
                                 st.rerun()
                         
@@ -321,7 +321,7 @@ def main():
                         st.markdown(f"**Current splitters at lines:** {', '.join(map(str, sorted(st.session_state.splitters)))}")
                         
                         # Confirm and proceed to analysis
-                        if st.button("🚀 Confirm splitting & start analysis", type="primary"):
+                        if st.button("Confirm splitting & start analysis", type="primary"):
                             # Split text according to confirmed splitters
                             poems = split_text_at_indices(text, st.session_state.splitters)
                             
