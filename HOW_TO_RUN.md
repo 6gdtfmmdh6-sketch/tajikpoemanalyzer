@@ -1,193 +1,191 @@
-# Wie starte ich die Anwendung?
-
-## Option 1: Web-UI (Empfohlen für PDF-Analyse)
-
+# How to Run the Application
+ 
+## Option 1: Web UI (Recommended for PDF Analysis)
+ 
 ### Start
 ```bash
 cd /Users/moritzschlenstedt/tajik-poem-analyzer
 streamlit run ui.py
 ```
-
-### Was passiert dann?
-1. Terminal zeigt: "You can now view your Streamlit app in your browser."
-2. Browser öffnet sich automatisch (normalerweise auf `http://localhost:8501`)
-3. Falls nicht, öffne manuell: `http://localhost:8501`
-
-### Verwendung im Browser
-1. **PDF hochladen**: Klicke auf "Browse files" und wähle eine PDF-Datei
-   - Unterstützt normale PDFs (Text wird extrahiert)
-   - Unterstützt gescannte PDFs (OCR wird automatisch verwendet)
-2. **Text prüfen**: Erweitere "Extrahierter Text anzeigen" um zu sehen was gelesen wurde
-3. **Analyse starten**: Klicke auf "Analyse starten"
-4. **Ergebnisse**: Für jedes Gedicht siehst du:
-   - Strukturelle Analyse (Zeilen, Silben, Metrum, Reimschema)
-   - Inhaltliche Analyse (Häufigste Wörter, Themen)
-   - Qualitätsmetriken
-
-### UI-Features
-- ✅ Einfaches, schlichtes Design
-- ✅ PDF-Upload direkt im Browser
-- ✅ Automatische Gedicht-Erkennung (trennt an `*****` oder Leerzeilen)
-- ✅ Fortschrittsanzeige während Analyse
-- ✅ Übersichtliche Ergebnisdarstellung
-
-## Option 2: Kommandozeile (Python)
-
-### Einzelnes Gedicht analysieren
+ 
+### What happens next?
+1. Terminal shows: "You can now view your Streamlit app in your browser."
+2. Browser opens automatically (usually at `http://localhost:8501`)
+3. If not, open manually: `http://localhost:8501`
+ 
+### Usage in Browser
+1. **Upload PDF**: Click "Browse files" and select a PDF file
+   - Supports normal PDFs (text extraction)
+   - Supports scanned PDFs (OCR automatically used)
+2. **Check text**: Expand "Show extracted text" to see what was read
+3. **Start analysis**: Click "Start Analysis"
+4. **Results**: For each poem you see:
+   - Structural analysis (lines, syllables, meter, rhyme scheme)
+   - Content analysis (most frequent words, themes)
+   - Quality metrics
+ 
+### UI Features
+- Simple, clean design
+- PDF upload directly in browser
+- Automatic poem detection (splits at `*****` or blank lines)
+- Progress indicator during analysis
+- Clear result presentation
+ 
+## Option 2: Command Line (Python)
+ 
+### Analyze Single Poem
 ```python
 from app2 import TajikPoemAnalyzer, AnalysisConfig
-
-# Analyzer initialisieren
+ 
+# Initialize analyzer
 config = AnalysisConfig(lexicon_path='data/tajik_lexicon.json')
 analyzer = TajikPoemAnalyzer(config=config)
-
-# Gedicht analysieren
+ 
+# Analyze poem
 poem_text = """
 Булбул дар боғ мехонад,
 Гул мешукуфад.
 Баҳор омад,
 Дил шод аст.
 """
-
+ 
 analysis = analyzer.analyze_poem(poem_text)
-print(f"Aruz-Metrum: {analysis.structural.aruz_analysis.identified_meter}")
-print(f"Reimschema: {analysis.structural.rhyme_pattern}")
+print(f"Aruz Meter: {analysis.structural.aruz_analysis.identified_meter}")
+print(f"Rhyme Scheme: {analysis.structural.rhyme_pattern}")
 ```
-
-### PDF analysieren
+ 
+### Analyze PDF
 ```python
 from app2 import TajikPoemAnalyzer, AnalysisConfig
 from pdf_handler import read_file_with_pdf_support
-
-# PDF lesen (unterstützt normale und gescannte PDFs)
-text = read_file_with_pdf_support('mein_gedicht.pdf')
-
-# Analyzer initialisieren
+ 
+# Read PDF (supports normal and scanned PDFs)
+text = read_file_with_pdf_support('my_poem.pdf')
+ 
+# Initialize analyzer
 config = AnalysisConfig(lexicon_path='data/tajik_lexicon.json')
 analyzer = TajikPoemAnalyzer(config=config)
-
-# Gedichte analysieren
-poems = text.split('*****')  # Oder andere Trennung
+ 
+# Analyze poems
+poems = text.split('*****')  # Or other separator
 for poem_text in poems:
     if len(poem_text.strip()) > 20:
         analysis = analyzer.analyze_poem(poem_text)
-        print(f"Metrum: {analysis.structural.aruz_analysis.identified_meter}")
+        print(f"Meter: {analysis.structural.aruz_analysis.identified_meter}")
 ```
-
-## Option 3: Beispiel-Skript ausführen
-
+ 
+## Option 3: Run Example Script
+ 
 ```bash
 python3 example_usage.py
 ```
-
-Dies analysiert die Beispielgedichte in `data/poems.txt` und zeigt vollständige Ergebnisse.
-
-## Tests ausführen
-
-### Workflow-Test
+ 
+This analyzes example poems in `data/poems.txt` and shows complete results.
+ 
+## Run Tests
+ 
+### Workflow Test
 ```bash
 python3 test_complete_workflow.py
 ```
-
-**Erwartete Ausgabe:**
+ 
+**Expected Output:**
 ```
 ======================================================================
-TEST: Vollständiger Workflow
+TEST: Complete Workflow
 ======================================================================
-
-✓ Test 1: Analyzer initialisieren...
-  Analyzer geladen
-
-✓ Test 2: Text-Datei lesen...
-  6945 Zeichen gelesen aus data/poems.txt
-  10 Gedichte gefunden
-
-✓ Test 3: Gedicht analysieren...
-  Zeilen: 14
-  Durchschn. Silben: 15.6
-  Aruz-Metrum: ramal
-  Konfidenz: medium
-
-✅ WORKFLOW ERFOLGREICH
+ 
+Test 1: Initialize analyzer...
+  Analyzer loaded
+ 
+Test 2: Read text file...
+  6945 characters read from data/poems.txt
+  10 poems found
+ 
+Test 3: Analyze poem...
+  Lines: 14
+  Avg syllables: 15.6
+  Aruz meter: ramal
+  Confidence: medium
+ 
+WORKFLOW SUCCESSFUL
 ```
-
+ 
 ## Troubleshooting
-
+ 
 ### "ModuleNotFoundError: No module named 'streamlit'"
 ```bash
 pip install streamlit
 ```
-
+ 
 ### "ModuleNotFoundError: No module named 'app2'"
-Stelle sicher, dass du im richtigen Verzeichnis bist:
+Make sure you're in the correct directory:
 ```bash
 cd /Users/moritzschlenstedt/tajik-poem-analyzer
 ```
-
-### OCR funktioniert nicht
-Installiere System-Dependencies:
-
+ 
+### OCR not working
+Install system dependencies:
+ 
 **macOS:**
 ```bash
 brew install poppler tesseract tesseract-lang
 ```
-
+ 
 **Ubuntu/Debian:**
 ```bash
 sudo apt-get install poppler-utils tesseract-ocr tesseract-ocr-fas
 ```
-
-### "Lexikon nicht gefunden"
-Prüfe ob die Daten-Dateien existieren:
+ 
+### "Lexicon not found"
+Check if data files exist:
 ```bash
 ls -lh data/
 ```
-
-Sollte zeigen:
+ 
+Should show:
 ```
 tajik_lexicon.json    1.4M
 tajik_corpus.txt      404M
 poems.txt             12K
 ```
-
-## Verzeichnis-Struktur
-
+ 
+## Directory Structure
+ 
 ```
 tajik-poem-analyzer/
-├── ui.py                      # Web-UI (START HIER!)
-├── app2.py                    # Haupt-Analyzer
-├── pdf_handler.py             # PDF/OCR Integration
-├── example_usage.py           # Beispiel-Skript
+├── ui.py                      # Web UI (START HERE!)
+├── app2.py                    # Main analyzer
+├── pdf_handler.py             # PDF/OCR integration
+├── example_usage.py           # Example script
 ├── test_complete_workflow.py  # Test
 ├── data/
-│   ├── tajik_lexicon.json     # 1.4MB - KRITISCH
-│   ├── tajik_corpus.txt       # 404MB - KRITISCH
-│   └── poems.txt              # Beispiele
-├── README.md                  # Vollständige Dokumentation
-├── QUICK_START.md             # Schnellstart
-├── HOW_TO_RUN.md              # Diese Datei
-└── STATUS.md                  # Projekt-Status
+│   ├── tajik_lexicon.json     # 1.4MB - CRITICAL
+│   ├── tajik_corpus.txt       # 404MB - CRITICAL
+│   └── poems.txt              # Examples
+├── README.md                  # Complete documentation
+└── HOW_TO_RUN.md              # This file
 ```
-
-## Wichtig
-
-### API-Verwendung
+ 
+## Important
+ 
+### API Usage
 ```python
-# RICHTIG ✅
+# CORRECT
 from app2 import TajikPoemAnalyzer, AnalysisConfig
 config = AnalysisConfig(lexicon_path='data/tajik_lexicon.json')
 analyzer = TajikPoemAnalyzer(config=config)
-analysis = analyzer.analyze_poem("Gedicht als String")
-
-# FALSCH ❌
-from enhanced_tajik_analyzer import ...  # Falsches Modul
+analysis = analyzer.analyze_poem("Poem as string")
+ 
+# WRONG
+from enhanced_tajik_analyzer import ...  # Wrong module
 poem = PoemData(content="...")
-analysis = analyzer.analyze_poem(poem)  # Erwartet String, nicht PoemData!
+analysis = analyzer.analyze_poem(poem)  # Expects string, not PoemData!
 ```
-
-## Nächste Schritte
-
-1. **Starte die UI**: `streamlit run ui.py`
-2. **Lade eine PDF hoch** mit tadschikischen/persischen Gedichten
-3. **Analysiere** und sieh dir die Ergebnisse an
-4. Bei Fragen siehe README.md oder QUICK_START.md
+ 
+## Next Steps
+ 
+1. **Start the UI**: `streamlit run ui.py`
+2. **Upload a PDF** with Tajik/Persian poems
+3. **Analyze** and view the results
+4. For questions see README.md
