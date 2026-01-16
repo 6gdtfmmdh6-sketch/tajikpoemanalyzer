@@ -352,11 +352,11 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
     content = analysis.content
     validation = analysis.quality_metrics
     
-    # Determine badge
+    # Create title with badge text
     if structural.is_free_verse:
-        badge = '<span class="free-verse-badge">Free Verse Detected</span>'
+        title = f"Poem {poem_num} - Enhanced Analysis - {content.total_words} words [Free Verse]"
     else:
-        badge = '<span class="classical-badge">Classical Form</span>'
+        title = f"Poem {poem_num} - Enhanced Analysis - {content.total_words} words [Classical Form]"
     
     with st.expander(f"Poem {poem_num} - Enhanced Analysis - {content.total_words} words {badge}", expanded=True, unsafe_allow_html=True):
         # Content
