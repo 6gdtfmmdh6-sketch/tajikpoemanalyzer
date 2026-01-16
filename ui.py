@@ -49,6 +49,15 @@ except ImportError as e:
     logger.error(f"Analyzer not available: {e}")
     ANALYZER_AVAILABLE = False
 
+# NEW: Import Corpus Manager
+try:
+    from corpus_manager import TajikCorpusManager
+    CORPUS_MANAGER_AVAILABLE = True
+    logger.info("Corpus Manager loaded successfully")
+except ImportError as e:
+    logger.error(f"Corpus Manager not available: {e}")
+    CORPUS_MANAGER_AVAILABLE = False
+
 try:
     from pdf_handler import read_file_with_pdf_support
 except ImportError:
@@ -544,6 +553,160 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
 
 
 # -------------------------------------------------------------------
+# Corpus Management Section
+# -------------------------------------------------------------------
+def display_corpus_section(all_results: List[Dict[str, Any]]):
+    """Display Corpus Management section in UI"""
+    st.markdown("---")
+    st.header("📚 Corpus Management")
+    
+    if not CORPUS_MANAGER_AVAILABLE:
+        st.warning("Corpus Manager is not available. Please ensure `corpus_manager.py` is in the same directory.")
+        return
+    
+    # Initialize Corpus Manager
+    corpus_manager = TajikCorpusManager()
+    
+    st.markdown("### Contribute to the Tajik Poetry Corpus")
+    st.markdown("""
+    Your analyzed poems can contribute to the scientific corpus.
+    Contributions are stored locally and can later be exported to GitHub.
+    """)
+    
+    # User information (optional)
+    with st.expander("User Information (optional)"):
+        username = st.text_input("GitHub Username (optional)")
+        email = st.text_input("Email (optional)")
+        license_accepted = st.checkbox(
+            "I accept the CC-BY-NC-SA 4.0 license for my contribution",
+            value=True
+        )
+    
+    # Prepare contributions
+    contributions = []
+    for result in all_results:
+        if result.get('success', False):
+            # Create analysis_result in required format
+            first_line = result['poem_text'].split('\n')[0].strip()
+            title = first_line[:50] if len(first_line) > 50 else first_line
+            
+            analysis_result = {
+                "poem_id": f"P{result['poem_num']:03d}",
+                "title": title,
+                "content": result['poem_text'],
+                "analysis": result['analysis'],
+                "validation": result.get('validation', result['analysis'].quality_metrics if hasattr(result['analysis'], 'quality_metrics') else {})
+            }
+            
+            # User info
+            user_info = {}
+            if username:
+                user_info["username"] = username
+            if email:
+                user_info["email"] = email
+            
+            try:
+                # Prepare contribution
+                contribution = corpus_manager.prepare_contribution(
+                    analysis_result=analysis_result,
+                    raw_text=result['poem_text'],
+                    user_info=user_info if user_info else {"anonymous": True}
+                )
+                
+                # Accept license
+                if license_accepted:
+                    contribution["metadata"]["license_accepted"] = True
+                
+                contributions.append(contribution)
+                
+            except Exception as e:
+                logger.error(f"Error preparing contribution: {e}")
+    
+    if not contributions:
+        st.info("No analyzed poems available for corpus contribution.")
+        return
+    
+    st.success(f"✅ {len(contributions)} poem(s) prepared for corpus contribution.")
+    
+    # Options for user
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📥 Save Contributions Locally", type="primary"):
+            with st.spinner("Saving contributions..."):
+                saved_count = 0
+                for contribution in contributions:
+                    try:
+                        corpus_manager.save_contribution(contribution)
+                        saved_count += 1
+                    except Exception as e:
+                        logger.error(f"Error saving contribution: {e}")
+                st.success(f"{saved_count} contribution(s) saved!")
+    
+    with col2:
+        if st.button("📤 Export for Git"):
+            with st.spinner("Exporting..."):
+                try:
+                    # First save all contributions
+                    for contribution in contributions:
+                        corpus_manager.save_contribution(contribution)
+                    
+                    export_path = corpus_manager.export_contributions_for_git()
+                    st.success(f"Export prepared: `{export_path}`")
+                    
+                    # Show Git commands
+                    git_commands = corpus_manager.generate_git_commands()
+                    with st.expander("Show Git Commands"):
+                        st.code(git_commands, language="bash")
+                except Exception as e:
+                    st.error(f"Export failed: {e}")
+    
+    with col3:
+        if st.button("📊 Corpus Statistics"):
+            try:
+                stats = corpus_manager.get_corpus_statistics()
+                
+                st.markdown("### Current Corpus Statistics")
+                col_stats1, col_stats2, col_stats3 = st.columns(3)
+                
+                with col_stats1:
+                    st.metric("Poems", stats.get("total_poems", 0))
+                    st.metric("Lines", stats.get("total_lines", 0))
+                
+                with col_stats2:
+                    st.metric("Words", stats.get("total_words", 0))
+                    st.metric("Contributors", stats.get("contributors", 0))
+                
+                with col_stats3:
+                    diversity = stats.get("lexical_diversity", 0)
+                    st.metric("Unique Words", stats.get("unique_words", 0))
+                    st.metric("Lex. Diversity", f"{diversity:.1f}%")
+                
+                # Show meter distribution
+                aruz_dist = stats.get("aruz_distribution", {})
+                if aruz_dist:
+                    st.markdown("**Meter Distribution:**")
+                    for meter, count in sorted(aruz_dist.items(), key=lambda x: -x[1])[:5]:
+                        st.write(f"- {meter}: {count}")
+                
+                # Show Radīf count
+                radif_count = stats.get("radif_count", 0)
+                if radif_count > 0:
+                    st.info(f"🔁 Poems with Radīf: {radif_count}")
+                    
+            except Exception as e:
+                st.error(f"Error loading statistics: {e}")
+    
+    # License information
+    st.markdown("---")
+    st.markdown("""
+    **License Information:**  
+    All contributions are under the [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) license.
+    By saving, you agree to this license.
+    """)
+
+
+# -------------------------------------------------------------------
 # Main Application
 # -------------------------------------------------------------------
 def main():
@@ -856,6 +1019,11 @@ def main():
                         except Exception as e:
                             logger.error(f"Error creating Excel report: {e}")
                             st.error(f"Could not create Excel report: {e}")
+                    
+                    # NEW: Corpus Management Section
+                    successful_results = [r for r in all_results if r.get('success', False)]
+                    if successful_results:
+                        display_corpus_section(successful_results)
                     
                     if st.button("Start over"):
                         st.session_state.splitters = []
