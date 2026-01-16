@@ -39,7 +39,9 @@ try:
         ModernVerseMetrics,
         EnhancedPoemSplitter,
         QualityValidator,
-        ExcelReporter
+        ExcelReporter,
+        RadifAnalysis,  # NEW: Radīf analysis dataclass
+        EnhancedRadifDetector  # NEW: Radīf detector
     )
     ANALYZER_AVAILABLE = True
     logger.info("Analyzer loaded successfully")
@@ -86,6 +88,19 @@ st.markdown("""
         padding: 2px 8px;
         border-radius: 10px;
         font-size: 0.8em;
+    }
+    .radif-badge {
+        background-color: #9b59b6;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.8em;
+    }
+    .radif-highlight {
+        background-color: #f0e6f6;
+        padding: 4px 8px;
+        border-left: 3px solid #9b59b6;
+        margin: 5px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -300,8 +315,15 @@ def display_classical_results(analysis, poem_num: int, poem_text: str):
         
         st.markdown("---")
         
-        # Rhyme Analysis
+        # Rhyme Analysis with Radīf Detection
         st.subheader("Rhyme Analysis (Qāfiyeh/Radīf)")
+        
+        # Check for global Radīf
+        radif_values = [r.radif for r in structural.rhyme_scheme if r.radif]
+        if radif_values and len(set(radif_values)) == 1:
+            global_radif = radif_values[0]
+            st.success(f"U0001F501 **Global Radīf Detected:** `{global_radif}` (appears in {len(radif_values)}/{len(structural.rhyme_scheme)} lines)")
+            st.info("Meter analysis was performed on lines with Radīf removed for accuracy.")
         
         if structural.rhyme_scheme:
             for i, rhyme in enumerate(structural.rhyme_scheme[:5]):
@@ -436,6 +458,33 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
             st.write(f"**Syllables per Line:** {', '.join(map(str, structural.syllables_per_line))}")
             if structural.aruz_analysis.variations_detected:
                 st.write(f"**Meter Variations:** {', '.join(structural.aruz_analysis.variations_detected)}")
+        
+        st.markdown("---")
+        
+        # Rhyme Analysis with Radīf Detection (NEW)
+        st.subheader("Rhyme Analysis (Qāfiyeh/Radīf)")
+        
+        # Check for global Radīf
+        radif_values = [r.radif for r in structural.rhyme_scheme if r.radif]
+        if radif_values and len(set(radif_values)) == 1:
+            global_radif = radif_values[0]
+            st.success(f"U0001f501 **Global Radīf Detected:** `{global_radif}` (appears in {len(radif_values)}/{len(structural.rhyme_scheme)} lines)")
+            st.info("Meter analysis was performed on lines with Radīf removed for accuracy.")
+        
+        if structural.rhyme_scheme:
+            for i, rhyme in enumerate(structural.rhyme_scheme[:5]):
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.write(f"**Line {i+1}**")
+                with col2:
+                    st.write(f"Qāfiyeh: `{rhyme.qafiyeh}`")
+                with col3:
+                    st.write(f"Radīf: `{rhyme.radif or '—'}`")
+                with col4:
+                    st.write(f"Type: {rhyme.rhyme_type}")
+            
+            if len(structural.rhyme_scheme) > 5:
+                st.caption(f"... and {len(structural.rhyme_scheme) - 5} more lines")
         
         st.markdown("---")
         
