@@ -77,3 +77,28 @@ streamlit run ui.py
 ### "Low meter confidence"
 - Free verse poems naturally have low confidence
 - Check for missing line breaks in original
+
+# Updated Workflow - Tajik Poetry Analyzer
+
+## New Streamlit Application
+
+The application has been redesigned with improved state management and navigation.
+
+### Key Changes:
+
+1. **Tab-based Navigation**: Three main tabs instead of scrolling
+2. **Proper Session State**: Fixed form submission issues
+3. **Export Options Prominent**: Excel download and corpus addition at top of results
+4. **Expandable Details**: Poem analyses are collapsed by default
+
+### Running the Application:
+
+```bash
+# Install dependencies
+pip install -r requirements_streamlit.txt
+
+# Run the new Streamlit app
+streamlit run streamlit_app.py
+
+# For development with auto-reload
+streamlit run streamlit_app.py --server.runOnSave true
