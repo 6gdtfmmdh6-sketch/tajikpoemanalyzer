@@ -9,15 +9,19 @@ Features:
 3. Modern verse metrics
 4. PDF and OCR support
 5. Scientific quality validation
+6. Corpus management with library functions
+7. Chronological analysis across periods
 """
 
 import streamlit as st
 from pathlib import Path
 import tempfile
 import re
+import json
 from typing import List, Optional, Dict, Any
 import logging
 from datetime import datetime
+from dataclasses import asdict
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -29,19 +33,9 @@ try:
         TajikPoemAnalyzer,
         EnhancedTajikPoemAnalyzer,
         AnalysisConfig,
-        PoemData,
-        AruzMeterAnalyzer,
-        AdvancedRhymeAnalyzer,
         MeterConfidence,
-        StructuralAnalysis,
-        EnhancedStructuralAnalysis,
-        EnhancedComprehensiveAnalysis,
-        ModernVerseMetrics,
-        EnhancedPoemSplitter,
         QualityValidator,
         ExcelReporter,
-        RadifAnalysis,  # NEW: Radīf analysis dataclass
-        EnhancedRadifDetector  # NEW: Radīf detector
     )
     ANALYZER_AVAILABLE = True
     logger.info("Analyzer loaded successfully")
@@ -49,13 +43,29 @@ except ImportError as e:
     logger.error(f"Analyzer not available: {e}")
     ANALYZER_AVAILABLE = False
 
-# NEW: Import Corpus Manager
+# NEW: Import extended library manager
+try:
+    from extended_corpus_manager import (
+        TajikLibraryManager,
+        VolumeMetadata,
+        Genre,
+        Period,
+        Genre,
+        Period
+    )
+    LIBRARY_MANAGER_AVAILABLE = True
+    logger.info("Extended Library Manager loaded successfully")
+except ImportError as e:
+    logger.warning(f"Extended Library Manager not available: {e}")
+    LIBRARY_MANAGER_AVAILABLE = False
+
+# Import basic corpus manager as fallback
 try:
     from corpus_manager import TajikCorpusManager
     CORPUS_MANAGER_AVAILABLE = True
-    logger.info("Corpus Manager loaded successfully")
+    logger.info("Basic Corpus Manager loaded successfully")
 except ImportError as e:
-    logger.error(f"Corpus Manager not available: {e}")
+    logger.warning(f"Basic Corpus Manager not available: {e}")
     CORPUS_MANAGER_AVAILABLE = False
 
 try:
@@ -105,11 +115,19 @@ st.markdown("""
         border-radius: 10px;
         font-size: 0.8em;
     }
-    .radif-highlight {
-        background-color: #f0e6f6;
-        padding: 4px 8px;
-        border-left: 3px solid #9b59b6;
-        margin: 5px 0;
+    .library-section {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 5px solid #3498db;
+        margin: 20px 0;
+    }
+    .timeline-chart {
+        background-color: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin: 15px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -256,9 +274,6 @@ def display_classical_results(analysis, poem_num: int, poem_text: str):
         
         with col2:
             confidence = structural.meter_confidence.value
-            confidence_color = {
-                'high': 'green', 'medium': 'orange', 'low': 'red', 'none': 'gray'
-            }.get(confidence, 'gray')
             st.metric("Confidence", f"{confidence.title()}")
         
         with col3:
@@ -331,7 +346,7 @@ def display_classical_results(analysis, poem_num: int, poem_text: str):
         radif_values = [r.radif for r in structural.rhyme_scheme if r.radif]
         if radif_values and len(set(radif_values)) == 1:
             global_radif = radif_values[0]
-            st.success(f"U0001F501 **Global Radīf Detected:** `{global_radif}` (appears in {len(radif_values)}/{len(structural.rhyme_scheme)} lines)")
+            st.success(f"🔁 **Global Radīf Detected:** `{global_radif}` (appears in {len(radif_values)}/{len(structural.rhyme_scheme)} lines)")
             st.info("Meter analysis was performed on lines with Radīf removed for accuracy.")
         
         if structural.rhyme_scheme:
@@ -361,7 +376,6 @@ def display_classical_results(analysis, poem_num: int, poem_text: str):
         with col1:
             st.metric("Quality Score", f"{quality_score:.0%}")
         with col2:
-            reliability_color = {'high': 'green', 'medium': 'orange', 'low': 'red'}.get(reliability, 'gray')
             st.metric("Reliability", reliability.title())
         
         warnings = validation.get('warnings', [])
@@ -377,7 +391,7 @@ def display_classical_results(analysis, poem_num: int, poem_text: str):
                 st.write(f"{r}")
 
 
-def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: int, poem_text: str):
+def display_enhanced_results(analysis, poem_num: int, poem_text: str):
     """Display enhanced analysis results with free verse detection"""
     structural = analysis.structural
     content = analysis.content
@@ -393,8 +407,6 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
         else:
             st.markdown('<span class="classical-badge">Classical Form</span>', unsafe_allow_html=True)
         
-        # Content
-        st.subheader("Content")
         # Content
         st.subheader("Content")
         st.text(poem_text[:500] + "..." if len(poem_text) > 500 else poem_text)
@@ -470,14 +482,14 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
         
         st.markdown("---")
         
-        # Rhyme Analysis with Radīf Detection (NEW)
+        # Rhyme Analysis with Radīf Detection
         st.subheader("Rhyme Analysis (Qāfiyeh/Radīf)")
         
         # Check for global Radīf
         radif_values = [r.radif for r in structural.rhyme_scheme if r.radif]
         if radif_values and len(set(radif_values)) == 1:
             global_radif = radif_values[0]
-            st.success(f"U0001f501 **Global Radīf Detected:** `{global_radif}` (appears in {len(radif_values)}/{len(structural.rhyme_scheme)} lines)")
+            st.success(f"🔁 **Global Radīf Detected:** `{global_radif}` (appears in {len(radif_values)}/{len(structural.rhyme_scheme)} lines)")
             st.info("Meter analysis was performed on lines with Radīf removed for accuracy.")
         
         if structural.rhyme_scheme:
@@ -553,33 +565,387 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
 
 
 # -------------------------------------------------------------------
-# Corpus Management Section
+# Library Management Functions
 # -------------------------------------------------------------------
-def display_corpus_section(all_results: List[Dict[str, Any]]):
-    """Display Corpus Management section in UI"""
+def collect_volume_metadata():
+    """Collect metadata for a poetry volume"""
     st.markdown("---")
-    st.header("📚 Corpus Management")
+    st.header("📖 Volume Metadata Collection")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        author_name = st.text_input("Author / Full Name*")
+        author_birth = st.number_input("Birth Year (optional)", 
+                                      min_value=1000, 
+                                      max_value=2024, 
+                                      value=None,
+                                      step=1,
+                                      help="e.g., 1945")
+        author_death = st.number_input("Death Year (optional)", 
+                                      min_value=1000, 
+                                      max_value=2024, 
+                                      value=None,
+                                      step=1,
+                                      help="e.g., 2020")
+        
+        volume_title = st.text_input("Title of Poetry Volume*")
+        publication_year = st.number_input("Publication Year*", 
+                                         min_value=1800, 
+                                         max_value=2024, 
+                                         value=2023,
+                                         step=1)
+    
+    with col2:
+        publisher = st.text_input("Publisher (optional)")
+        city = st.text_input("Place of Publication (optional)")
+        isbn = st.text_input("ISBN (optional)")
+        pages = st.number_input("Number of Pages (optional)", 
+                               min_value=1, 
+                               max_value=1000, 
+                               value=None,
+                               step=1)
+        
+        # Genres (multiple selection)
+        if LIBRARY_MANAGER_AVAILABLE:
+            genre_options = [g.value for g in Genre]
+            selected_genres = st.multiselect(
+                "Literary Genres",
+                options=genre_options,
+                default=[]
+            )
+            genres = [Genre(g) for g in selected_genres]
+        else:
+            genres = []
+            st.info("Genre selection requires extended library manager")
+    
+    # Period inference
+    st.markdown("### Historical Period")
+    
+    if LIBRARY_MANAGER_AVAILABLE:
+        period_options = {p.value: p for p in Period}
+        default_period = None
+        
+        # Auto-infer period
+        if publication_year:
+            if publication_year < 1920:
+                default_period = Period.CLASSICAL.value
+            elif 1920 <= publication_year < 1940:
+                default_period = Period.SOVIET_EARLY.value
+            elif 1940 <= publication_year < 1970:
+                default_period = Period.SOVIET_MID.value
+            elif 1970 <= publication_year < 1991:
+                default_period = Period.SOVIET_LATE.value
+            elif 1991 <= publication_year < 2000:
+                default_period = Period.INDEPENDENCE.value
+            else:
+                default_period = Period.CONTEMPORARY.value
+        
+        default_index = 0
+        if default_period:
+            period_keys = list(period_options.keys())
+            default_index = period_keys.index(default_period) if default_period in period_keys else 0
+        
+        selected_period_value = st.selectbox(
+            "Historical Period*",
+            options=list(period_options.keys()),
+            index=default_index
+        )
+        selected_period = period_options[selected_period_value]
+    else:
+        selected_period = None
+        st.info("Period classification requires extended library manager")
+    
+    # Source type
+    source_type = st.radio(
+        "Source Type",
+        options=["printed", "manuscript", "digital"],
+        horizontal=True
+    )
+    
+    # Additional notes
+    notes = st.text_area("Additional Notes (optional)", height=100)
+    
+    # Validate required fields
+    if not author_name or not volume_title:
+        st.warning("Please fill in the required fields marked with *")
+        return None
+    
+    if LIBRARY_MANAGER_AVAILABLE:
+        # Create metadata object
+        metadata = VolumeMetadata(
+            author_name=author_name,
+            author_birth_year=int(author_birth) if author_birth else None,
+            author_death_year=int(author_death) if author_death else None,
+            volume_title=volume_title,
+            publication_year=int(publication_year),
+            publisher=publisher if publisher else None,
+            city=city if city else None,
+            genres=genres,
+            period=selected_period,
+            isbn=isbn if isbn else None,
+            pages=int(pages) if pages else None,
+            source_type=source_type,
+            notes=notes if notes else None
+        )
+        
+        # Preview
+        with st.expander("Metadata Preview"):
+            st.json(metadata.to_dict())
+        
+        return metadata
+    else:
+        # Basic metadata structure if extended manager not available
+        return {
+            "author_name": author_name,
+            "author_birth_year": int(author_birth) if author_birth else None,
+            "author_death_year": int(author_death) if author_death else None,
+            "volume_title": volume_title,
+            "publication_year": int(publication_year),
+            "publisher": publisher if publisher else None,
+            "city": city if city else None,
+            "isbn": isbn if isbn else None,
+            "pages": int(pages) if pages else None,
+            "source_type": source_type,
+            "notes": notes if notes else None
+        }
+
+
+def display_library_management(all_results: List[Dict[str, Any]]):
+    """Display library management section"""
+    st.markdown("---")
+    st.header("📚 Library & Corpus Management")
+    
+    # Tab selection for different management options
+    tab1, tab2, tab3 = st.tabs(["📖 Add to Library", "📊 Library Statistics", "📤 Export & Share"])
+    
+    with tab1:
+        # Volume metadata collection
+        metadata = collect_volume_metadata()
+        
+        if metadata and st.button("➕ Add Volume to Library", type="primary"):
+            successful_results = [r for r in all_results if r.get('success', False)]
+            
+            if not successful_results:
+                st.error("No successful analyses to add to library.")
+                return
+            
+            if LIBRARY_MANAGER_AVAILABLE:
+                try:
+                    # Prepare poems data
+                    poems_data = []
+                    for result in successful_results:
+                        # Convert analysis to dict if it's an object
+                        analysis_data = result['analysis']
+                        if hasattr(analysis_data, '__dict__'):
+                            analysis_dict = asdict(analysis_data)
+                        else:
+                            analysis_dict = analysis_data
+                        
+                        poems_data.append({
+                            'content': result['poem_text'],
+                            'analysis': analysis_dict,
+                            'poem_num': result['poem_num']
+                        })
+                    
+                    # Initialize library manager
+                    library_manager = TajikLibraryManager()
+                    
+                    # Register volume
+                    with st.spinner("Registering volume in library..."):
+                        volume_id = library_manager.register_volume(metadata, poems_data)
+                        
+                        # Generate timeline report
+                        html_report = library_manager.generate_timeline_report("html")
+                        
+                        # Save report
+                        report_path = Path(library_manager.library_path) / "timeline" / f"report_{volume_id}.html"
+                        report_path.parent.mkdir(exist_ok=True)
+                        with open(report_path, 'w', encoding='utf-8') as f:
+                            f.write(html_report)
+                        
+                        st.success(f"✅ Volume successfully registered: {volume_id}")
+                        
+                        # Show quick statistics
+                        corpus = library_manager.load_corpus()
+                        stats = corpus["statistics"]
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Total Volumes", stats["total_volumes"])
+                        with col2:
+                            st.metric("Total Poems", stats["total_poems"])
+                        with col3:
+                            earliest = stats["publication_years"]["min"] or "—"
+                            st.metric("Earliest Volume", earliest)
+                        with col4:
+                            latest = stats["publication_years"]["max"] or "—"
+                            st.metric("Latest Volume", latest)
+                        
+                        # Show timeline visualization
+                        st.markdown("### Timeline Visualization")
+                        with open(report_path, 'r', encoding='utf-8') as f:
+                            html_content = f.read()
+                        st.components.v1.html(html_content, height=600, scrolling=True)
+                
+                except Exception as e:
+                    st.error(f"Error registering volume: {e}")
+                    logger.error(f"Library registration error: {e}")
+            else:
+                # Fallback to basic corpus manager
+                if CORPUS_MANAGER_AVAILABLE:
+                    display_basic_corpus_section(successful_results)
+                else:
+                    st.warning("Neither library manager nor basic corpus manager is available.")
+    
+    with tab2:
+        # Library statistics
+        if LIBRARY_MANAGER_AVAILABLE:
+            try:
+                library_manager = TajikLibraryManager()
+                corpus = library_manager.load_corpus()
+                stats = corpus["statistics"]
+                
+                st.subheader("📊 Library Statistics")
+                
+                # Overall metrics
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Volumes", stats["total_volumes"])
+                    st.metric("Poems", stats["total_poems"])
+                with col2:
+                    st.metric("Lines", stats.get("total_lines", 0))
+                    st.metric("Words", stats.get("total_words", 0))
+                with col3:
+                    st.metric("Unique Words", stats.get("unique_words", 0))
+                    st.metric("Authors", stats.get("authors_count", 0))
+                
+                # Timeline distribution
+                st.subheader("Timeline Distribution")
+                
+                # By period
+                if "period_distribution" in stats and stats["period_distribution"]:
+                    st.write("**By Historical Period:**")
+                    for period, count in sorted(stats["period_distribution"].items()):
+                        st.write(f"- {period}: {count} volumes")
+                
+                # By year
+                if "publication_years" in stats and stats["publication_years"].get("distribution"):
+                    st.write("**Publication Year Range:**")
+                    years = stats["publication_years"]
+                    st.write(f"- From: {years.get('min', '—')}")
+                    st.write(f"- To: {years.get('max', '—')}")
+                    st.write(f"- Years covered: {len(years.get('distribution', {}))}")
+                
+                # Meter distribution
+                if "meter_distribution" in stats and stats["meter_distribution"]:
+                    st.subheader("Meter Distribution")
+                    for meter, count in sorted(stats["meter_distribution"].items(), key=lambda x: -x[1])[:10]:
+                        st.write(f"- {meter}: {count}")
+                
+                # Theme distribution
+                if "theme_distribution" in stats and stats["theme_distribution"]:
+                    st.subheader("Theme Distribution")
+                    for theme, count in sorted(stats["theme_distribution"].items(), key=lambda x: -x[1])[:5]:
+                        st.write(f"- {theme}: {count}")
+                        
+            except Exception as e:
+                st.error(f"Error loading library statistics: {e}")
+        else:
+            st.info("Extended library statistics require the extended library manager.")
+    
+    with tab3:
+        # Export options
+        st.subheader("Export Options")
+        
+        if LIBRARY_MANAGER_AVAILABLE:
+            try:
+                library_manager = TajikLibraryManager()
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if st.button("📁 Export Complete Library (JSON)"):
+                        corpus = library_manager.load_corpus()
+                        json_data = json.dumps(corpus, ensure_ascii=False, indent=2)
+                        
+                        st.download_button(
+                            label="Download JSON",
+                            data=json_data,
+                            file_name=f"tajik_poetry_library_{datetime.now().strftime('%Y%m%d')}.json",
+                            mime="application/json"
+                        )
+                
+                with col2:
+                    if st.button("📊 Generate Timeline Report"):
+                        html_report = library_manager.generate_timeline_report("html")
+                        
+                        st.download_button(
+                            label="Download HTML Report",
+                            data=html_report,
+                            file_name=f"timeline_report_{datetime.now().strftime('%Y%m%d')}.html",
+                            mime="text/html"
+                        )
+                
+                # Git export
+                st.subheader("Git Export for Collaboration")
+                if st.button("🔗 Prepare Git Export"):
+                    try:
+                        export_path = library_manager.export_contributions_for_git()
+                        st.success(f"Export prepared: `{export_path}`")
+                        
+                        # Show Git commands
+                        git_commands = """
+                        # Git Commands for Sharing:
+                        1. Navigate to your repository:
+                           cd /path/to/your/tajik-poetry-repo
+                        
+                        2. Create new branch:
+                           git checkout -b new-contributions
+                        
+                        3. Copy exported files:
+                           cp "{export_file}" ./contributions/
+                        
+                        4. Commit changes:
+                           git add contributions/
+                           git commit -m "New Tajik poetry contributions"
+                        
+                        5. Push to GitHub:
+                           git push origin new-contributions
+                        """.format(export_file=export_path)
+                        
+                        st.code(git_commands, language="bash")
+                    except Exception as e:
+                        st.error(f"Export preparation failed: {e}")
+                        
+            except Exception as e:
+                st.error(f"Export error: {e}")
+        else:
+            st.info("Extended export features require the extended library manager.")
+
+
+def display_basic_corpus_section(all_results: List[Dict[str, Any]]):
+    """Display basic corpus management section (fallback)"""
+    st.markdown("---")
+    st.header("📚 Basic Corpus Management")
     
     if not CORPUS_MANAGER_AVAILABLE:
-        st.warning("Corpus Manager is not available. Please ensure `corpus_manager.py` is in the same directory.")
+        st.warning("Basic Corpus Manager is not available.")
         return
     
     # Initialize Corpus Manager
     corpus_manager = TajikCorpusManager()
     
     st.markdown("### Contribute to the Tajik Poetry Corpus")
-    st.markdown("""
-    Your analyzed poems can contribute to the scientific corpus.
-    Contributions are stored locally and can later be exported to GitHub.
-    """)
     
     # User information (optional)
     with st.expander("User Information (optional)"):
-        username = st.text_input("GitHub Username (optional)")
-        email = st.text_input("Email (optional)")
+        username = st.text_input("GitHub Username (optional)", key="corpus_username")
+        email = st.text_input("Email (optional)", key="corpus_email")
         license_accepted = st.checkbox(
             "I accept the CC-BY-NC-SA 4.0 license for my contribution",
-            value=True
+            value=True,
+            key="corpus_license"
         )
     
     # Prepare contributions
@@ -632,7 +998,7 @@ def display_corpus_section(all_results: List[Dict[str, Any]]):
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("📥 Save Contributions Locally", type="primary"):
+        if st.button("💾 Save Contributions Locally", type="primary"):
             with st.spinner("Saving contributions..."):
                 saved_count = 0
                 for contribution in contributions:
@@ -662,48 +1028,24 @@ def display_corpus_section(all_results: List[Dict[str, Any]]):
                     st.error(f"Export failed: {e}")
     
     with col3:
-        if st.button("📊 Corpus Statistics"):
+        if st.button("📈 Show Statistics"):
             try:
-                stats = corpus_manager.get_corpus_statistics()
-                
-                st.markdown("### Current Corpus Statistics")
-                col_stats1, col_stats2, col_stats3 = st.columns(3)
-                
-                with col_stats1:
-                    st.metric("Poems", stats.get("total_poems", 0))
-                    st.metric("Lines", stats.get("total_lines", 0))
-                
-                with col_stats2:
-                    st.metric("Words", stats.get("total_words", 0))
-                    st.metric("Contributors", stats.get("contributors", 0))
-                
-                with col_stats3:
-                    diversity = stats.get("lexical_diversity", 0)
-                    st.metric("Unique Words", stats.get("unique_words", 0))
-                    st.metric("Lex. Diversity", f"{diversity:.1f}%")
-                
-                # Show meter distribution
-                aruz_dist = stats.get("aruz_distribution", {})
-                if aruz_dist:
-                    st.markdown("**Meter Distribution:**")
-                    for meter, count in sorted(aruz_dist.items(), key=lambda x: -x[1])[:5]:
-                        st.write(f"- {meter}: {count}")
-                
-                # Show Radīf count
-                radif_count = stats.get("radif_count", 0)
-                if radif_count > 0:
-                    st.info(f"🔁 Poems with Radīf: {radif_count}")
+                # Load and display basic statistics
+                corpus_path = Path("./tajik_corpus/corpus/master.json")
+                if corpus_path.exists():
+                    with open(corpus_path, 'r', encoding='utf-8') as f:
+                        corpus_data = json.load(f)
+                    
+                    stats = corpus_data.get("statistics", {})
+                    
+                    st.metric("Total Poems", stats.get("total_poems", 0))
+                    st.metric("Total Lines", stats.get("total_lines", 0))
+                    st.metric("Total Words", stats.get("total_words", 0))
+                else:
+                    st.info("No corpus data found yet.")
                     
             except Exception as e:
                 st.error(f"Error loading statistics: {e}")
-    
-    # License information
-    st.markdown("---")
-    st.markdown("""
-    **License Information:**  
-    All contributions are under the [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) license.
-    By saving, you agree to this license.
-    """)
 
 
 # -------------------------------------------------------------------
@@ -728,7 +1070,7 @@ def main():
     if 'analysis_mode' not in st.session_state:
         st.session_state.analysis_mode = "Enhanced"
     
-    st.title("Tajik Poetry Analyzer")
+    st.title("📖 Tajik Poetry Analyzer")
     st.markdown("Advanced scientific analysis of Tajik poetry with classical and modern approaches")
     st.markdown("---")
 
@@ -749,18 +1091,34 @@ def main():
         st.header("Features")
         
         if analysis_mode == "Classical (ʿArūḍ only)":
-            st.write("16 Classical ʿArūḍ Meters")
-            st.write("Qāfiyeh/Radīf Detection")
-            st.write("Prosodic Weight Calculation")
-            st.write("Classical Form Recognition")
-            st.write("Scientific Validation")
+            st.write("• 16 Classical ʿArūḍ Meters")
+            st.write("• Qāfiyeh/Radīf Detection")
+            st.write("• Prosodic Weight Calculation")
+            st.write("• Classical Form Recognition")
+            st.write("• Scientific Validation")
         else:
-            st.write("Free Verse Detection")
-            st.write("Modern Verse Metrics")
-            st.write("Enjambement Analysis")
-            st.write("Line Variation Analysis")
-            st.write("Prose-Poetry Assessment")
-            st.write("All Classical Features")
+            st.write("• Free Verse Detection")
+            st.write("• Modern Verse Metrics")
+            st.write("• Enjambement Analysis")
+            st.write("• Line Variation Analysis")
+            st.write("• Prose-Poetry Assessment")
+            st.write("• All Classical Features")
+        
+        st.markdown("---")
+        st.header("Library Features")
+        
+        if LIBRARY_MANAGER_AVAILABLE:
+            st.write("• Volume Metadata Collection")
+            st.write("• Chronological Analysis")
+            st.write("• Historical Periods")
+            st.write("• Genre Classification")
+            st.write("• Timeline Visualization")
+        elif CORPUS_MANAGER_AVAILABLE:
+            st.write("• Basic Corpus Contribution")
+            st.write("• Git Export")
+            st.write("• Local Storage")
+        else:
+            st.write("• No library features available")
         
         st.markdown("---")
         st.header("Supported Classical Meters")
@@ -770,7 +1128,7 @@ def main():
         st.write(", ".join(meters))
 
     # Main area
-    st.header("Upload File")
+    st.header("📄 Upload File")
 
     uploaded_file = st.file_uploader(
         "Upload PDF or TXT file",
@@ -787,14 +1145,14 @@ def main():
             with st.spinner("Extracting text from file..."):
                 text = read_file_with_pdf_support(tmp_path)
                 st.session_state.extracted_text = text
-                st.success(f"Text extracted: {len(text)} characters")
+                st.success(f"✅ Text extracted: {len(text)} characters")
 
             with st.expander("Show extracted text"):
                 st.text_area("Content", text, height=200)
 
             # Poem splitting section
             if not st.session_state.proceed_to_analysis:
-                st.header("Poem Splitting")
+                st.header("✂️ Poem Splitting")
                 
                 split_mode = st.radio(
                     "How do you want to split the poems?",
@@ -840,23 +1198,23 @@ def main():
                         col1, col2 = st.columns(2)
                         with col1:
                             if selected_position in st.session_state.splitters:
-                                if st.button("Remove"):
+                                if st.button("❌ Remove"):
                                     st.session_state.splitters.remove(selected_position)
                                     st.rerun()
                             else:
-                                if st.button("Add"):
+                                if st.button("➕ Add"):
                                     st.session_state.splitters.append(selected_position)
                                     st.session_state.splitters.sort()
                                     st.rerun()
                         
                         with col2:
-                            if st.button("Clear all"):
+                            if st.button("🗑️ Clear all"):
                                 st.session_state.splitters = []
                                 st.rerun()
                         
                         st.markdown(f"**Splitters:** {', '.join(map(str, sorted(st.session_state.splitters)))}")
                         
-                        if st.button("Confirm and Analyze", type="primary"):
+                        if st.button("✅ Confirm and Analyze", type="primary"):
                             poems = split_text_at_indices(text, st.session_state.splitters)
                             st.session_state.final_poems = poems
                             st.session_state.proceed_to_analysis = True
@@ -868,7 +1226,7 @@ def main():
                     poems = split_poems_auto(text)
                     st.info(f"Found {len(poems)} poems")
                     
-                    if st.button("Confirm and Analyze", type="primary"):
+                    if st.button("✅ Confirm and Analyze", type="primary"):
                         st.session_state.final_poems = poems
                         st.session_state.proceed_to_analysis = True
                         st.rerun()
@@ -882,10 +1240,10 @@ def main():
                     st.session_state.proceed_to_analysis = False
                     st.rerun()
                 
-                st.header("Analysis")
+                st.header("🔍 Analysis")
                 st.info(f"Analyzing {len(poems)} poem(s) in {analysis_mode} mode...")
                 
-                if st.button("Start Analysis", type="primary"):
+                if st.button("🚀 Start Analysis", type="primary"):
                     # Load appropriate analyzer
                     if analysis_mode == "Classical (ʿArūḍ only)":
                         analyzer = load_classical_analyzer()
@@ -903,7 +1261,6 @@ def main():
                         try:
                             if analysis_mode == "Classical (ʿArūḍ only)":
                                 analysis = analyzer.analyze_poem(poem_text)
-                                # Convert to dict for consistency
                                 all_results.append({
                                     'poem_text': poem_text,
                                     'poem_num': i+1,
@@ -934,7 +1291,7 @@ def main():
                     
                     with results_container:
                         st.markdown("---")
-                        st.header("Results")
+                        st.header("📊 Results")
                         
                         col1, col2, col3 = st.columns(3)
                         successful = sum(1 for r in all_results if r['success'])
@@ -966,12 +1323,12 @@ def main():
                                     result['poem_text']
                                 )
                     
-                    st.success("Analysis completed!")
+                    st.success("✅ Analysis completed!")
                     
                     # Generate Excel Report
                     if successful > 0:
                         st.markdown("---")
-                        st.subheader("Download Report")
+                        st.subheader("📥 Download Report")
                         
                         try:
                             # Prepare data for ExcelReporter
@@ -1008,7 +1365,7 @@ def main():
                                 excel_bytes = f.read()
                             
                             st.download_button(
-                                label="Download Excel Report",
+                                label="📊 Download Excel Report",
                                 data=excel_bytes,
                                 file_name=excel_filename,
                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -1020,12 +1377,17 @@ def main():
                             logger.error(f"Error creating Excel report: {e}")
                             st.error(f"Could not create Excel report: {e}")
                     
-                    # NEW: Corpus Management Section
+                    # Library/Corpus Management Section
                     successful_results = [r for r in all_results if r.get('success', False)]
                     if successful_results:
-                        display_corpus_section(successful_results)
+                        if LIBRARY_MANAGER_AVAILABLE:
+                            display_library_management(successful_results)
+                        elif CORPUS_MANAGER_AVAILABLE:
+                            display_basic_corpus_section(successful_results)
+                        else:
+                            st.info("Library/corpus features not available.")
                     
-                    if st.button("Start over"):
+                    if st.button("🔄 Start over"):
                         st.session_state.splitters = []
                         st.session_state.all_lines = []
                         st.session_state.proceed_to_analysis = False
@@ -1037,15 +1399,16 @@ def main():
                 tmp_path.unlink()
 
     else:
+        # Landing page when no file uploaded
         st.info("Please upload a PDF or TXT file to begin.")
         
         st.markdown("---")
-        st.subheader("Analysis Capabilities")
+        st.subheader("🎯 Analysis Capabilities")
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("**Classical Analysis:**")
+            st.markdown("**🔬 Classical Analysis:**")
             st.markdown("""
             - 16 Classical ʿArūḍ Meters
             - Qāfiyeh (rhyme) & Radīf (refrain) detection
@@ -1056,7 +1419,7 @@ def main():
             """)
         
         with col2:
-            st.markdown("**Enhanced Analysis:**")
+            st.markdown("**🚀 Enhanced Analysis:**")
             st.markdown("""
             - Free verse detection
             - Modern verse metrics
@@ -1068,14 +1431,49 @@ def main():
             """)
         
         st.markdown("---")
-        st.subheader("Research Applications")
+        
+        if LIBRARY_MANAGER_AVAILABLE or CORPUS_MANAGER_AVAILABLE:
+            st.subheader("📚 Library & Corpus Features")
+            
+            if LIBRARY_MANAGER_AVAILABLE:
+                st.markdown("""
+                - **Volume metadata** (author, year, publisher, genres)
+                - **Historical period classification** (6 periods)
+                - **Timeline visualization** across decades
+                - **Genre analysis** and distribution
+                - **Stylistic evolution tracking**
+                - **Export to JSON/HTML/Git**
+                """)
+            elif CORPUS_MANAGER_AVAILABLE:
+                st.markdown("""
+                - **Basic corpus contribution**
+                - **Local storage of analyses**
+                - **Git export functionality**
+                - **Collaborative research support**
+                """)
+        
+        st.markdown("---")
+        st.subheader("🎓 Research Applications")
         st.markdown("""
         - **Literary Studies**: Analysis of classical and modern Tajik poetry
         - **Linguistics**: Phonetic and prosodic analysis of Tajik language
         - **Digital Humanities**: Computational analysis of poetic structures
         - **Comparative Literature**: Comparison of Persianate poetic traditions
         - **Text Analysis**: Statistical analysis of poetic content and themes
+        - **Historical Research**: Tracking stylistic evolution over time
         """)
+        
+        # Quick start instructions
+        with st.expander("🚀 Quick Start Guide"):
+            st.markdown("""
+            1. **Prepare your text**: Use AI-assisted transcription for best results
+            2. **Upload**: PDF or TXT file with Tajik Cyrillic text
+            3. **Split poems**: Automatic or manual poem separation
+            4. **Analyze**: Choose classical or enhanced analysis
+            5. **Export**: Download Excel reports or add to library
+            
+            **For best results**: Ensure proper Tajik characters (ӣ, ӯ, ҷ, ҳ, қ, ғ)
+            """)
 
 
 if __name__ == "__main__":
