@@ -151,6 +151,107 @@ def main():
                         st.metric("Fehlgeschlagen", len(all_results) - successful)
 
                     st.markdown("---")
+                    # ZUSATZ IN ui.py (nach dem File-Upload, vor der Analyse)
+
+if st.session_state.get('extracted_text'):
+    st.header("📐 Gedichte trennen")
+    
+    st.markdown("""
+    **Das System hat Vorschläge für Gedicht-Trennungen gemacht.**
+    *   **Überprüfe** die roten Trennlinien im Text.
+    *   **Verschiebe** sie per Slider.
+    *   **Füge neue hinzu** oder **lösche** sie, indem du den Slider auf eine neue Position ziehst und auf "Trenner hinzufügen/entfernen" klickst.
+    """)
+    
+    # 1. Automatische Vorschläge generieren (mit deiner EnhancedPoemSplitter-Logik)
+    if 'splitters' not in st.session_state:
+        config = TajikCyrillicConfig()
+        splitter = EnhancedPoemSplitter(config)
+        all_lines = st.session_state['extracted_text'].split('\n')
+        
+        # Einfache Heuristik für Start-Vorschläge: Leerzeilen finden
+        proposed_split_indices = [i for i, line in enumerate(all_lines) if line.strip() == '']
+        # Fallback: Gleichmäßig verteilen, falls keine Leerzeilen
+        if not proposed_split_indices and len(all_lines) > 10:
+            proposed_split_indices = list(range(10, len(all_lines), 20))
+        
+        st.session_state['splitters'] = proposed_split_indices
+        st.session_state['all_lines'] = all_lines
+    
+    # 2. Interaktive Anzeige und Bearbeitung
+    col_left, col_right = st.columns([3, 1])
+    
+    with col_left:
+        st.subheader("Text mit Trennvorschlägen")
+        display_text = ""
+        for i, line in enumerate(st.session_state['all_lines']):
+            # Füge eine markierte Trennlinie ein, wenn dieser Index in der Splitter-Liste ist
+            if i in st.session_state['splitters']:
+                display_text += f"\n--- 🟥 **TRENNER** (vor Zeile {i+1}) ---\n"
+            display_text += line + "\n"
+        st.text_area("Vorschau", display_text, height=400, key="display_area", disabled=True)
+    
+    with col_right:
+        st.subheader("Trenner steuern")
+        
+        # Wähle einen Trenner zum Bearbeiten aus oder füge einen neuen hinzu
+        all_positions = list(range(len(st.session_state['all_lines'])))
+        current_splitters = st.session_state['splitters']
+        
+        # Slider zum Verschieben oder Auswählen einer neuen Position
+        selected_position = st.slider(
+            "Zeilenindex für Trenner",
+            0,
+            len(st.session_state['all_lines'])-1,
+            value=0 if not current_splitters else min(current_splitters),
+            key="splitter_slider"
+        )
+        
+        col_add_remove, col_clear = st.columns(2)
+        with col_add_remove:
+            if selected_position in current_splitters:
+                if st.button("Delete splitter"):
+                    st.session_state['splitters'].remove(selected_position)
+                    st.rerun()
+            else:
+                if st.button("Add splitter"):
+                    st.session_state['splitters'].append(selected_position)
+                    st.session_state['splitters'].sort()  # Ordnung halten
+                    st.rerun()
+        
+        with col_clear:
+            if st.button("Delete all"):
+                st.session_state['splitters'] = []
+                st.rerun()
+        
+        st.markdown("---")
+        st.markdown(f"Aktuelle Trenner an Zeilen: **{', '.join(map(str, sorted(current_splitters)))}**")
+        
+        # 3. Bestätigen und zur Analyse übergehen
+        if st.button("Trennung bestätigen & Analyse starten", type="primary"):
+            # Text anhand der bestätigten Trenner aufteilen
+            split_indices = sorted(st.session_state['splitters'])
+            all_lines = st.session_state['all_lines']
+            
+            poems = []
+            start_idx = 0
+            for split_idx in split_indices:
+                poem_lines = all_lines[start_idx:split_idx]
+                poem_text = '\n'.join(poem_lines).strip()
+                if poem_text:  # Leere "Gedichte" vermeiden
+                    poems.append(poem_text)
+                start_idx = split_idx
+            # Letztes Gedicht hinzufügen
+            final_poem = '\n'.join(all_lines[start_idx:]).strip()
+            if final_poem:
+                poems.append(final_poem)
+            
+            st.session_state['final_poems'] = poems
+            st.success(f"Erfolgreich in {len(poems)} Gedicht(e) geteilt. Starte Analyse...")
+            # Setze einen Flag, um mit der Analyse fortzufahren
+            st.session_state['proceed_to_analysis'] = True
+
+# Später im Code: Wenn 'proceed_to_analysis' True ist, analysiere jedes Gedicht in st.session_state['final_poems']
 
                     # Einzelne Gedichte
                     for result in all_results:
