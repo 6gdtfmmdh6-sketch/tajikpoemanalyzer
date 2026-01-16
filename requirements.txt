@@ -1,0 +1,17 @@
+# Core dependencies
+openpyxl>=3.1.0
+numpy>=1.24.0
+
+# PDF and OCR support (NEW)
+PyPDF2>=3.0.0
+pytesseract>=0.3.10
+pdf2image>=1.16.0  # Requires poppler-utils on system
+pillow>=10.0.0
+
+# Arabic/Persian text support (NEW)
+arabic-reshaper>=3.0.0
+python-bidi>=0.4.2
+
+# Testing (optional)
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
