@@ -1205,7 +1205,79 @@ class StructuralAnalyzer:
 
         return best_example
 
+class EnhancedPoemSplitter:
+    """Advanced poem splitter for Tajik Cyrillic poetry collections with manual correction support"""
+    
+    def __init__(self, config: AnalysisConfig):
+        self.config = config
+        self.logger = logging.getLogger(f"{__name__}.EnhancedPoemSplitter")
+        
+    def get_split_suggestions(self, text: str) -> List[int]:
+        """
+        Returns line indices where a new poem is likely to start.
+        These suggestions are shown to the user for manual confirmation/correction.
+        """
+        lines = text.split('\n')
+        suggestions = []
+        
+        for i, line in enumerate(lines):
+            score = 0
+            
+            # 1. Title-like lines (strong signal)
+            if self._looks_like_title(line):
+                score += 2
+            
+            # 2. Empty line followed by a title-like line
+            if i > 0 and not lines[i-1].strip() and len(line.strip()) > 0:
+                score += 1.5
+            
+            # 3. Lines with poem markers like "***" or "---"
+            if re.match(r'^[\*\-=]{3,}$', line.strip()):
+                # Suggest split before this line
+                suggestions.append(max(0, i-1))
+                continue
+                
+            # 4. Line numbers (e.g., "1." or "(2)")
+            if re.match(r'^\s*[\d]+[\.\)]\s*[A-ZА-Я]', line):
+                score += 1
+            
+            # 5. Uppercase at the beginning of the line after an empty line
+            if i > 0 and not lines[i-1].strip() and line.strip() and line.strip()[0].isupper():
+                score += 0.5
+            
+            if score >= 1.5:  # Threshold
+                suggestions.append(i)
+        
+        # Remove suggestions that are too close (within 3 lines)
+        if suggestions:
+            filtered = [suggestions[0]]
+            for s in suggestions[1:]:
+                if s - filtered[-1] > 3:
+                    filtered.append(s)
+            suggestions = filtered
+        
+        return suggestions
 
+    def _looks_like_title(self, line: str) -> bool:
+        """Simple heuristic to recognize title lines."""
+        line = line.strip()
+        if not line or len(line) > 150:
+            return False
+        
+        # Does not end with punctuation
+        if line.endswith(('.', '!', '?', ':', ',')):
+            return False
+        
+        # Starts with an uppercase letter
+        if not line[0].isupper():
+            return False
+        
+        # Not written entirely in uppercase (not a "SCREAM")
+        if line.isupper():
+            return False
+        
+        return True
+        
 class ContentAnalyzer:
     """Enhanced content analyzer"""
 
@@ -2281,3 +2353,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
