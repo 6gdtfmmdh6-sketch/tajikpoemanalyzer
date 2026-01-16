@@ -1,0 +1,1331 @@
+#!/usr/bin/env python3
+"""
+Tajik Poetry Analyzer - Consolidated Version
+Scientific Research Grade with Proper ʿArūḍ Analysis
+
+This implementation provides:
+1. Proper ʿArūḍ (Classical Arabic-Persian prosody) analysis with 16 meters
+2. Phonetic-based rhyme detection (Qāfiyeh/Radīf)
+3. Accurate syllable weight calculation
+4. Scientific error handling and validation
+5. Excel report generation
+
+Consolidated from app2.py and enhanced_tajik_analyzer.py
+Removed: ContentAnalyzer, LotmanSemioticAnalyzer, TranslationTheoreticalAnalyzer, SemanticFieldAnalyzer
+"""
+
+import re
+import json
+import logging
+import unicodedata
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field, asdict
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Any, Set
+from enum import Enum
+from datetime import datetime
+
+import openpyxl
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+from openpyxl.chart import BarChart, Reference
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# ENUMS
+# =============================================================================
+
+class SyllableWeight(Enum):
+    """Prosodic weight classification"""
+    HEAVY = "—"  # Long syllable
+    LIGHT = "U"  # Short syllable (using U instead of ∪ for compatibility)
+    ANCEPS = "×"  # Variable weight
+    UNKNOWN = "?"  # Uncertain weight
+
+
+class MeterConfidence(Enum):
+    """Confidence levels for meter identification"""
+    HIGH = "high"  # >90% pattern match
+    MEDIUM = "medium"  # 70-90% pattern match
+    LOW = "low"  # 50-70% pattern match
+    NONE = "none"  # <50% pattern match
+
+
+# =============================================================================
+# DATACLASSES
+# =============================================================================
+
+@dataclass
+class AnalysisConfig:
+    """Configuration for poetry analysis"""
+    lexicon_path: str = 'data/tajik_lexicon.json'
+    min_poem_length: int = 10
+    max_neologisms: int = 10
+    min_title_length: int = 3
+    max_title_length: int = 50
+
+    # Extended theme taxonomy
+    themes: Dict[str, List[str]] = field(default_factory=lambda: {
+        "Love": ["муҳаббат", "ишқ", "дил", "маҳбуб", "ёр", "дилбар", "ошиқ", "маъшуқ"],
+        "Nature": ["дарё", "кӯҳ", "гул", "баҳор", "навбаҳор", "осмон", "офтоб", "моҳ", "ситора"],
+        "Homeland": ["ватан", "тоҷикистон", "чашма", "диёр", "марзу бум", "кишвар"],
+        "Religion": ["худо", "ҷаннат", "ибодат", "намоз", "масҷид", "аллоҳ", "паёмбар"],
+        "Mysticism": ["тариқат", "мақом", "ҳақиқат", "маърифат", "ваҳдат", "фано"],
+        "Philosophy": ["ҳикмат", "дониш", "хирад", "ақл", "маънӣ", "ҷаҳон", "ҳастӣ"]
+    })
+
+
+@dataclass
+class PoemData:
+    """Data structure for a single poem"""
+    title: str
+    content: str
+    poem_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class ProsodicSyllable:
+    """Represents a syllable with prosodic information"""
+    text: str
+    weight: SyllableWeight
+    phonetic: Optional[str] = None
+    position: int = 0
+    confidence: float = 1.0
+    stress_level: int = 0
+
+
+@dataclass
+class AruzPattern:
+    """Represents a classical ʿArūḍ meter pattern"""
+    name: str
+    pattern: str
+    description: str
+    variations: List[str] = field(default_factory=list)
+    frequency_weight: float = 1.0
+
+
+@dataclass
+class PhoneticAnalysis:
+    """Results of phonetic analysis"""
+    phonetic_transcription: str
+    syllable_boundaries: List[int]
+    stress_pattern: List[int]
+    confidence: float
+    phoneme_inventory: Dict[str, int] = field(default_factory=dict)
+
+
+@dataclass
+class RhymeAnalysis:
+    """Advanced rhyme analysis results"""
+    qafiyeh: str  # The actual rhyming sound
+    radif: str  # Repeated refrain after rhyme
+    phonetic_rhyme: str  # Phonetic representation
+    rhyme_type: str  # perfect, imperfect, eye-rhyme, etc.
+    rhyme_position: str = "end"
+    confidence: float = 0.0
+
+
+@dataclass
+class AruzAnalysis:
+    """Results of ʿArūḍ meter analysis"""
+    identified_meter: str
+    pattern_match: str
+    confidence: MeterConfidence
+    pattern_accuracy: float
+    variations_detected: List[str]
+    line_scansion: List[ProsodicSyllable]
+    caesura_positions: List[int] = field(default_factory=list)
+
+
+@dataclass
+class StructuralAnalysis:
+    """Enhanced structural analysis results"""
+    lines: int
+    syllables_per_line: List[int]
+    syllable_patterns: List[List[ProsodicSyllable]]
+    aruz_analysis: AruzAnalysis
+    rhyme_scheme: List[RhymeAnalysis]
+    rhyme_pattern: str
+    stanza_structure: str
+    avg_syllables: float
+    prosodic_consistency: float
+    meter_confidence: MeterConfidence
+
+
+@dataclass
+class LiteraryAssessment:
+    """Multi-perspective literary assessment"""
+    german_perspective: int
+    persian_tradition: int
+    tajik_elements: int
+    modernist_features: int
+
+
+@dataclass
+class ComprehensiveAnalysis:
+    """Complete analysis results"""
+    structural: StructuralAnalysis
+    literary: LiteraryAssessment
+    quality_metrics: Dict[str, float]
+
+
+# =============================================================================
+# PHONETICS
+# =============================================================================
+
+class PersianTajikPhonetics:
+    """Comprehensive Persian/Tajik phonetic analyzer"""
+
+    def __init__(self):
+        # IPA mapping for Tajik/Persian
+        self.phoneme_map = {
+            # Consonants (Cyrillic)
+            'б': 'b', 'п': 'p', 'т': 't', 'ҷ': 'ʤ', 'ч': 'ʧ',
+            'х': 'x', 'д': 'd', 'р': 'r', 'з': 'z', 'ж': 'ʒ',
+            'с': 's', 'ш': 'ʃ', 'ғ': 'ʁ', 'ф': 'f', 'қ': 'q',
+            'к': 'k', 'г': 'g', 'л': 'l', 'м': 'm', 'н': 'n',
+            'в': 'v', 'ҳ': 'h', 'й': 'j',
+            # Vowels (Cyrillic)
+            'а': 'a', 'о': 'o', 'у': 'u', 'э': 'e', 'и': 'i',
+            'ӣ': 'iː', 'ӯ': 'uː', 'я': 'ja', 'ю': 'ju', 'ё': 'jo',
+            'е': 'e',
+            # Arabic script consonants
+            'ب': 'b', 'پ': 'p', 'ت': 't', 'ث': 's', 'ج': 'ʤ', 'چ': 'ʧ',
+            'ح': 'ħ', 'خ': 'x', 'د': 'd', 'ذ': 'z', 'ر': 'r', 'ز': 'z',
+            'ژ': 'ʒ', 'س': 's', 'ش': 'ʃ', 'ص': 's', 'ض': 'z', 'ط': 't',
+            'ظ': 'z', 'ع': 'ʔ', 'غ': 'ɣ', 'ف': 'f', 'ق': 'q', 'ک': 'k',
+            'گ': 'g', 'ل': 'l', 'م': 'm', 'ن': 'n', 'و': 'w', 'ه': 'h',
+            'ی': 'j',
+        }
+
+        self.vowels = set('аоуэиӣӯяюёе')
+        self.long_vowels = set('ӣӯ')
+        self.short_vowels = {'a', 'e', 'i', 'o', 'u'}
+        self.long_vowels_ipa = {'aː', 'eː', 'iː', 'oː', 'uː'}
+        self.consonants = set('бпттҷчхдрзжсшғфқкглмнвҳй')
+        self.sonorous = set('рлмнвй')
+        self.diphthongs = {'ай', 'ой', 'уй', 'ей', 'ӯй', 'ав', 'ов'}
+        self.diphthongs_ipa = {'aj', 'aw', 'oj', 'ej'}
+
+    def analyze_phonetics(self, text: str) -> PhoneticAnalysis:
+        """Complete phonetic analysis"""
+        text = unicodedata.normalize('NFC', text.lower())
+
+        # Generate phonetic transcription
+        phonetic = self._to_ipa(text)
+
+        # Find syllable boundaries
+        syllables = self._syllabify(text)
+        boundaries = [s[0] for s in syllables] + [len(text)] if syllables else []
+
+        # Determine stress pattern
+        stress_pattern = self._determine_stress(syllables)
+
+        # Count phonemes
+        phoneme_inventory = Counter(phonetic)
+
+        return PhoneticAnalysis(
+            phonetic_transcription=phonetic,
+            syllable_boundaries=boundaries,
+            stress_pattern=stress_pattern,
+            phoneme_inventory=dict(phoneme_inventory),
+            confidence=0.85
+        )
+
+    def to_phonetic(self, text: str) -> PhoneticAnalysis:
+        """Alias for analyze_phonetics for compatibility"""
+        return self.analyze_phonetics(text)
+
+    def _to_ipa(self, text: str) -> str:
+        """Convert to IPA transcription"""
+        result = []
+        for char in text:
+            if char in self.phoneme_map:
+                result.append(self.phoneme_map[char])
+            elif char.isspace():
+                result.append(' ')
+            else:
+                result.append(char)
+        return ''.join(result)
+
+    def _syllabify(self, text: str) -> List[Tuple[int, str]]:
+        """Syllabify text according to Persian/Tajik rules"""
+        syllables = []
+        i = 0
+
+        while i < len(text):
+            if text[i].isspace():
+                i += 1
+                continue
+
+            syl_start = i
+
+            # Skip initial consonants
+            while i < len(text) and text[i] in self.consonants:
+                i += 1
+
+            # Must have a vowel nucleus
+            if i < len(text) and text[i] in self.vowels:
+                # Check for diphthong
+                if i + 1 < len(text) and text[i:i + 2] in self.diphthongs:
+                    i += 2
+                else:
+                    i += 1
+
+                # Coda consonants
+                while i < len(text) and text[i] in self.consonants:
+                    if i + 1 < len(text) and text[i + 1] in self.vowels:
+                        if text[i] in self.sonorous:
+                            i += 1
+                        break
+                    i += 1
+
+                syllables.append((syl_start, text[syl_start:i]))
+            else:
+                i += 1
+
+        return syllables
+
+    def _determine_stress(self, syllables: List[Tuple[int, str]]) -> List[int]:
+        """Determine stress pattern (Persian typically has final stress)"""
+        if not syllables:
+            return []
+
+        stress = [0] * len(syllables)
+        stress[-1] = 2  # Primary stress on final syllable
+
+        for i, (_, syl) in enumerate(syllables[:-1]):
+            if any(v in syl for v in self.long_vowels):
+                stress[i] = 1
+
+        return stress
+
+    def calculate_syllable_weight(self, syllable: str) -> SyllableWeight:
+        """Calculate syllable weight for prosody"""
+        syllable = syllable.strip()
+
+        if not syllable:
+            return SyllableWeight.UNKNOWN
+
+        # Check for long vowels
+        if any(v in syllable for v in self.long_vowels):
+            return SyllableWeight.HEAVY
+
+        # Check for diphthongs
+        if any(d in syllable for d in self.diphthongs):
+            return SyllableWeight.HEAVY
+
+        # Check for closed syllables (CVC)
+        vowel_count = sum(1 for c in syllable if c in self.vowels)
+        consonant_after_vowel = False
+
+        for i, char in enumerate(syllable):
+            if char in self.vowels and i + 1 < len(syllable):
+                if syllable[i + 1] in self.consonants:
+                    consonant_after_vowel = True
+                    break
+
+        if vowel_count > 0 and consonant_after_vowel:
+            return SyllableWeight.HEAVY
+
+        return SyllableWeight.LIGHT
+
+
+# =============================================================================
+# ARUZ METER ANALYZER (16 Classical Meters)
+# =============================================================================
+
+class AruzMeterAnalyzer:
+    """
+    Classical ʿArūḍ (Arabic-Persian prosody) analyzer
+    Implements the 16 classical Arabic meters adapted for Persian/Tajik poetry
+    """
+
+    def __init__(self, config: Optional[AnalysisConfig] = None):
+        self.config = config or AnalysisConfig()
+        self.phonetics = PersianTajikPhonetics()
+
+        # Classical ʿArūḍ meters with their patterns
+        # Pattern notation: — = heavy syllable, U = light syllable
+        self.aruz_meters = {
+            "ṭawīl": AruzPattern(
+                name="ṭawīl",
+                pattern="U—UU—U—UU—",
+                description="فعولن مفاعيلن فعولن مفاعيلن",
+                variations=["U—UU—U—UU", "U—UU—U—U—"],
+                frequency_weight=1.5
+            ),
+            "basīṭ": AruzPattern(
+                name="basīṭ",
+                pattern="UU—U—UU—U—",
+                description="مستفعلن فاعلن مستفعلن فاعلن",
+                variations=["UU—U—UU—U", "UU—UUU—U—"],
+                frequency_weight=1.2
+            ),
+            "wāfir": AruzPattern(
+                name="wāfir",
+                pattern="U—UU—UU—U",
+                description="مفاعلتن مفاعلتن مفاعلتن",
+                variations=["U—UU—UU—", "U—UUU—U"],
+                frequency_weight=1.0
+            ),
+            "kāmil": AruzPattern(
+                name="kāmil",
+                pattern="UU—UUU—UU—",
+                description="متفاعلن متفاعلن متفاعلن",
+                variations=["UU—UU—UU—", "UU—UUU—U"],
+                frequency_weight=1.0
+            ),
+            "mutaqārib": AruzPattern(
+                name="mutaqārib",
+                pattern="U—U—U—U—",
+                description="فعولن فعولن فعولن فعولن",
+                variations=["U—U—U—U", "UU—U—U—"],
+                frequency_weight=0.8
+            ),
+            "hazaj": AruzPattern(
+                name="hazaj",
+                pattern="—U—U—U—U",
+                description="مفاعیلن مفاعیلن مفاعیلن مفاعیلن",
+                variations=["—U—U—U—", "U—U—U—U"],
+                frequency_weight=0.9
+            ),
+            "rajaz": AruzPattern(
+                name="rajaz",
+                pattern="UU—UU—UU—",
+                description="مستفعلن مستفعلن مستفعلن",
+                variations=["UU—UU—U—", "UUU—UU—"],
+                frequency_weight=0.7
+            ),
+            "ramal": AruzPattern(
+                name="ramal",
+                pattern="—U——U——U—",
+                description="فاعلاتن فاعلاتن فاعلاتن",
+                variations=["U—UU—U—", "UU—U—U—"],
+                frequency_weight=0.8
+            ),
+            "sarīʿ": AruzPattern(
+                name="sarīʿ",
+                pattern="UUU—U—UU—",
+                description="مستفعلن مستفعلن مفعولات",
+                variations=["UUU—UU—", "UU—U—UU—"],
+                frequency_weight=0.6
+            ),
+            "munsarih": AruzPattern(
+                name="munsarih",
+                pattern="UU—U—UU—U",
+                description="مستفعلن مفعولات مستفعلن",
+                variations=["UU—U—UU—", "UUU—UU—U"],
+                frequency_weight=0.5
+            ),
+            "khafīf": AruzPattern(
+                name="khafīf",
+                pattern="U—UU—U—U",
+                description="فاعلاتن مستفعلن فاعلن",
+                variations=["U—UU—U—", "UU—UU—U"],
+                frequency_weight=0.6
+            ),
+            "muḍāriʿ": AruzPattern(
+                name="muḍāriʿ",
+                pattern="—U—U—U—",
+                description="مفاعیلن فاعلاتن مفاعیلن",
+                variations=["—U—U—U", "U—U—U—"],
+                frequency_weight=0.4
+            ),
+            "muqtaḍab": AruzPattern(
+                name="muqtaḍab",
+                pattern="U—U—U—",
+                description="مفعولات مستفعلن",
+                variations=["U—U—U", "UU—U—"],
+                frequency_weight=0.3
+            ),
+            "mujtath": AruzPattern(
+                name="mujtath",
+                pattern="UU—U—UU—U—",
+                description="مستفعلن فاعلاتن",
+                variations=["UU—U", "UUU—"],
+                frequency_weight=0.3
+            ),
+            "mutadārik": AruzPattern(
+                name="mutadārik",
+                pattern="—U—U—U—U",
+                description="فاعلن فاعلن فاعلن فاعلن",
+                variations=["U—U—U—", "UU—U—U"],
+                frequency_weight=0.5
+            ),
+            "madīd": AruzPattern(
+                name="madīd",
+                pattern="—U——U—U—",
+                description="فاعلاتن فاعلن فاعلاتن",
+                variations=["—U——U—", "U——U—U—"],
+                frequency_weight=0.4
+            ),
+        }
+
+        logger.info(f"AruzMeterAnalyzer initialized with {len(self.aruz_meters)} classical meters")
+
+    def analyze_meter(self, line: str) -> AruzAnalysis:
+        """Analyze a line of poetry for ʿArūḍ meter"""
+        try:
+            phonetic_analysis = self.phonetics.analyze_phonetics(line)
+            syllables = self._extract_prosodic_syllables(line, phonetic_analysis)
+
+            if not syllables:
+                logger.warning(f"No syllables found in line: {line[:50]}...")
+                return self._create_empty_analysis()
+
+            pattern = "".join([syl.weight.value for syl in syllables])
+            best_match = self._find_best_meter_match(pattern)
+            caesuras = self._find_caesuras(syllables)
+
+            return AruzAnalysis(
+                identified_meter=best_match["meter"],
+                pattern_match=pattern,
+                confidence=best_match["confidence"],
+                pattern_accuracy=best_match["accuracy"],
+                variations_detected=best_match["variations"],
+                line_scansion=syllables,
+                caesura_positions=caesuras
+            )
+
+        except Exception as e:
+            logger.error(f"Meter analysis failed for line '{line[:50]}...': {e}")
+            return self._create_empty_analysis()
+
+    def _extract_prosodic_syllables(self, line: str, phonetic: PhoneticAnalysis) -> List[ProsodicSyllable]:
+        """Extract syllables with prosodic information"""
+        syllables = []
+        words = line.split()
+        position = 0
+
+        for word in words:
+            word_syllables = self.phonetics._syllabify(word)
+
+            for i, (start, syl_text) in enumerate(word_syllables):
+                weight = self.phonetics.calculate_syllable_weight(syl_text)
+                phonetic_syl = self.phonetics._to_ipa(syl_text)
+                stress = 2 if i == len(word_syllables) - 1 else 0
+
+                syllables.append(ProsodicSyllable(
+                    text=syl_text,
+                    weight=weight,
+                    phonetic=phonetic_syl,
+                    position=position,
+                    stress_level=stress,
+                    confidence=phonetic.confidence
+                ))
+                position += 1
+
+        return syllables
+
+    def _find_best_meter_match(self, pattern: str) -> Dict[str, Any]:
+        """Find the best matching ʿArūḍ meter"""
+        best_match = {
+            "meter": "unknown",
+            "pattern": pattern,
+            "confidence": MeterConfidence.NONE,
+            "accuracy": 0.0,
+            "variations": []
+        }
+
+        best_score = 0.0
+
+        for meter_name, meter_info in self.aruz_meters.items():
+            score = self._pattern_similarity(pattern, meter_info.pattern)
+
+            variation_scores = []
+            for variation in meter_info.variations:
+                var_score = self._pattern_similarity(pattern, variation)
+                variation_scores.append((variation, var_score))
+
+            max_variation_score = max([score] + [s for _, s in variation_scores])
+            weighted_score = max_variation_score * meter_info.frequency_weight
+
+            if weighted_score > best_score:
+                best_score = weighted_score
+                best_match.update({
+                    "meter": meter_name,
+                    "pattern": meter_info.pattern,
+                    "accuracy": max_variation_score,
+                    "variations": [var for var, s in variation_scores if s > 0.7]
+                })
+
+        if best_score >= 0.9:
+            best_match["confidence"] = MeterConfidence.HIGH
+        elif best_score >= 0.7:
+            best_match["confidence"] = MeterConfidence.MEDIUM
+        elif best_score >= 0.5:
+            best_match["confidence"] = MeterConfidence.LOW
+
+        return best_match
+
+    def _pattern_similarity(self, pattern1: str, pattern2: str) -> float:
+        """Calculate similarity between two prosodic patterns"""
+        if not pattern1 or not pattern2:
+            return 0.0
+
+        len1, len2 = len(pattern1), len(pattern2)
+        max_len = max(len1, len2)
+
+        if max_len == 0:
+            return 1.0
+
+        matches = sum(1 for i in range(min(len1, len2)) if pattern1[i] == pattern2[i])
+        length_penalty = abs(len1 - len2) / max_len
+        similarity = (matches / max_len) * (1 - length_penalty * 0.5)
+
+        return max(0.0, similarity)
+
+    def _find_caesuras(self, syllables: List[ProsodicSyllable]) -> List[int]:
+        """Find caesura positions"""
+        caesuras = []
+        for i in range(1, len(syllables) - 1):
+            if (syllables[i - 1].stress_level > 0 and
+                    syllables[i].stress_level == 0 and
+                    i % 4 == 0):
+                caesuras.append(i)
+        return caesuras
+
+    def _create_empty_analysis(self) -> AruzAnalysis:
+        """Create empty analysis for error cases"""
+        return AruzAnalysis(
+            identified_meter="unknown",
+            pattern_match="",
+            confidence=MeterConfidence.NONE,
+            pattern_accuracy=0.0,
+            variations_detected=[],
+            line_scansion=[],
+            caesura_positions=[]
+        )
+
+
+# =============================================================================
+# RHYME ANALYZER
+# =============================================================================
+
+class AdvancedRhymeAnalyzer:
+    """Advanced rhyme analysis with phonetic awareness and qāfiyeh/radīf detection"""
+
+    def __init__(self):
+        self.phonetics = PersianTajikPhonetics()
+        self.stop_words = {
+            "ва", "дар", "бо", "аз", "то", "барои", "чун", "ки", "агар",
+            "ё", "на", "ҳам", "низ", "ба", "аммо", "лекин", "пас"
+        }
+
+    def analyze_rhyme(self, line: str) -> RhymeAnalysis:
+        """Perform comprehensive rhyme analysis"""
+        try:
+            words = re.findall(r'[\wӣӯ]+', line)
+            if not words:
+                return self._empty_rhyme()
+
+            meaningful_words = [w for w in words if w.lower() not in self.stop_words]
+            if not meaningful_words:
+                meaningful_words = words
+
+            rhyme_word = meaningful_words[-1]
+            radif = self._extract_radif(words, rhyme_word)
+            qafiyeh = self._extract_qafiyeh(rhyme_word)
+
+            phonetic_analysis = self.phonetics.analyze_phonetics(qafiyeh)
+            phonetic_rhyme = phonetic_analysis.phonetic_transcription
+            rhyme_type = self._classify_rhyme_type(qafiyeh, phonetic_rhyme)
+
+            return RhymeAnalysis(
+                qafiyeh=qafiyeh,
+                radif=radif,
+                phonetic_rhyme=phonetic_rhyme,
+                rhyme_type=rhyme_type,
+                rhyme_position="end",
+                confidence=phonetic_analysis.confidence
+            )
+
+        except Exception as e:
+            logger.error(f"Rhyme analysis failed for line '{line[:50]}...': {e}")
+            return self._empty_rhyme()
+
+    def _extract_radif(self, words: List[str], rhyme_word: str) -> str:
+        """Extract radīf (repeated refrain)"""
+        if not words or not rhyme_word:
+            return ""
+        try:
+            rhyme_index = words.index(rhyme_word)
+            if rhyme_index < len(words) - 1:
+                return " ".join(words[rhyme_index + 1:])
+        except ValueError:
+            pass
+        return ""
+
+    def _extract_qafiyeh(self, word: str) -> str:
+        """Extract qāfiyeh (rhyming element)"""
+        if not word:
+            return ""
+        if len(word) >= 3:
+            return word[-3:]
+        elif len(word) >= 2:
+            return word[-2:]
+        return word
+
+    def _classify_rhyme_type(self, qafiyeh: str, phonetic: str) -> str:
+        """Classify rhyme type"""
+        if not qafiyeh:
+            return "none"
+        if len(phonetic) >= 3:
+            return "rich"
+        elif len(phonetic) >= 2:
+            return "perfect"
+        return "minimal"
+
+    def calculate_rhyme_similarity(self, rhyme1: RhymeAnalysis, rhyme2: RhymeAnalysis) -> float:
+        """Calculate phonetic similarity between two rhymes"""
+        if not rhyme1.phonetic_rhyme or not rhyme2.phonetic_rhyme:
+            return 0.0
+
+        phone1, phone2 = rhyme1.phonetic_rhyme, rhyme2.phonetic_rhyme
+        matches = sum(1 for a, b in zip(phone1, phone2) if a == b)
+        max_len = max(len(phone1), len(phone2))
+
+        if max_len == 0:
+            return 1.0
+
+        radif_bonus = 0.2 if rhyme1.radif == rhyme2.radif and rhyme1.radif else 0.0
+        return min(1.0, (matches / max_len) + radif_bonus)
+
+    def _empty_rhyme(self) -> RhymeAnalysis:
+        """Return empty rhyme analysis"""
+        return RhymeAnalysis(
+            qafiyeh="",
+            radif="",
+            phonetic_rhyme="",
+            rhyme_type="none",
+            rhyme_position="none",
+            confidence=0.0
+        )
+
+
+# =============================================================================
+# STRUCTURAL ANALYZER
+# =============================================================================
+
+class StructuralAnalyzer:
+    """Enhanced structural analyzer"""
+
+    def __init__(self, config: Optional[AnalysisConfig] = None):
+        self.config = config or AnalysisConfig()
+        self.aruz_analyzer = AruzMeterAnalyzer(self.config)
+        self.rhyme_analyzer = AdvancedRhymeAnalyzer()
+        self.phonetics = PersianTajikPhonetics()
+
+    def analyze(self, poem_content: str) -> StructuralAnalysis:
+        """Comprehensive structural analysis"""
+        lines = [line.strip() for line in poem_content.split('\n') if line.strip()]
+
+        if not lines:
+            raise ValueError("No valid lines found in poem")
+
+        line_analyses = []
+        syllable_counts = []
+        syllable_patterns = []
+        rhyme_analyses = []
+
+        for line in lines:
+            phonetic = self.phonetics.analyze_phonetics(line)
+            syllables = self.aruz_analyzer._extract_prosodic_syllables(line, phonetic)
+            syllable_patterns.append(syllables)
+            syllable_counts.append(len(syllables))
+
+            rhyme = self.rhyme_analyzer.analyze_rhyme(line)
+            rhyme_analyses.append(rhyme)
+
+            aruz = self.aruz_analyzer.analyze_meter(line)
+
+            line_analyses.append({
+                'syllables': syllables,
+                'rhyme': rhyme,
+                'aruz': aruz
+            })
+
+        rhyme_pattern = self._generate_rhyme_pattern(rhyme_analyses)
+        stanza_structure = self._detect_stanza_structure(lines, rhyme_pattern)
+        avg_syllables = sum(syllable_counts) / len(syllable_counts) if syllable_counts else 0
+        prosodic_consistency = self._calculate_prosodic_consistency(line_analyses)
+
+        meters = [la['aruz'] for la in line_analyses]
+        overall_aruz = self._determine_overall_meter(meters)
+
+        return StructuralAnalysis(
+            lines=len(lines),
+            syllables_per_line=syllable_counts,
+            syllable_patterns=syllable_patterns,
+            aruz_analysis=overall_aruz,
+            rhyme_scheme=rhyme_analyses,
+            rhyme_pattern=rhyme_pattern,
+            stanza_structure=stanza_structure,
+            avg_syllables=round(avg_syllables, 2),
+            prosodic_consistency=prosodic_consistency,
+            meter_confidence=overall_aruz.confidence
+        )
+
+    def _generate_rhyme_pattern(self, rhyme_analyses: List[RhymeAnalysis]) -> str:
+        """Generate rhyme scheme pattern"""
+        if not rhyme_analyses:
+            return ""
+
+        pattern = []
+        rhyme_groups = {}
+        next_label = 'A'
+
+        for rhyme in rhyme_analyses:
+            rhyme_key = (rhyme.qafiyeh, rhyme.radif, rhyme.phonetic_rhyme)
+            matched = False
+
+            for prev_key, label in rhyme_groups.items():
+                prev_rhyme = RhymeAnalysis(
+                    qafiyeh=prev_key[0],
+                    radif=prev_key[1],
+                    phonetic_rhyme=prev_key[2],
+                    rhyme_type="",
+                    rhyme_position="end",
+                    confidence=0.0
+                )
+                similarity = self.rhyme_analyzer.calculate_rhyme_similarity(rhyme, prev_rhyme)
+                if similarity > 0.7:
+                    pattern.append(label)
+                    matched = True
+                    break
+
+            if not matched:
+                pattern.append(next_label)
+                rhyme_groups[rhyme_key] = next_label
+                next_label = chr(ord(next_label) + 1)
+
+        return ''.join(pattern)
+
+    def _detect_stanza_structure(self, lines: List[str], rhyme_pattern: str) -> str:
+        """Detect stanza structure"""
+        if len(lines) <= 2:
+            return "monostich" if len(lines) == 1 else "couplet"
+
+        if rhyme_pattern.startswith('AA') and all(c in ['A', 'B'] for c in rhyme_pattern):
+            return "ghazal"
+
+        if len(lines) == 4 and rhyme_pattern in ['AABA', 'AAAA']:
+            return "rubaiyat"
+
+        if len(lines) > 10 and rhyme_pattern[:2] == 'AA':
+            return "qasida"
+
+        return "free_verse"
+
+    def _calculate_prosodic_consistency(self, line_analyses: List[Dict]) -> float:
+        """Calculate prosodic consistency"""
+        if not line_analyses:
+            return 0.0
+
+        meters = [la['aruz'].identified_meter for la in line_analyses]
+        unique_meters = set(meters)
+        meter_consistency = 1.0 / len(unique_meters) if unique_meters else 0.0
+
+        syllable_counts = [len(la['syllables']) for la in line_analyses]
+        if syllable_counts:
+            avg = sum(syllable_counts) / len(syllable_counts)
+            variance = sum((c - avg) ** 2 for c in syllable_counts) / len(syllable_counts)
+            syllable_consistency = 1.0 / (1.0 + variance / max(avg, 1))
+        else:
+            syllable_consistency = 0.0
+
+        return (meter_consistency + syllable_consistency) / 2
+
+    def _determine_overall_meter(self, meters: List[AruzAnalysis]) -> AruzAnalysis:
+        """Determine overall meter"""
+        if not meters:
+            return AruzAnalysis(
+                identified_meter="unknown",
+                pattern_match="",
+                confidence=MeterConfidence.NONE,
+                pattern_accuracy=0.0,
+                variations_detected=[],
+                line_scansion=[],
+                caesura_positions=[]
+            )
+
+        meter_counts = Counter(m.identified_meter for m in meters)
+        most_common = meter_counts.most_common(1)[0][0]
+
+        return max(
+            (m for m in meters if m.identified_meter == most_common),
+            key=lambda m: m.pattern_accuracy
+        )
+
+
+# =============================================================================
+# POEM SPLITTER
+# =============================================================================
+
+class EnhancedPoemSplitter:
+    """Advanced poem splitter for Tajik Cyrillic poetry collections"""
+
+    def __init__(self, config: Optional[AnalysisConfig] = None):
+        self.config = config or AnalysisConfig()
+        self.logger = logging.getLogger(f"{__name__}.EnhancedPoemSplitter")
+
+    def get_split_suggestions(self, text: str) -> List[int]:
+        """Returns line indices where a new poem is likely to start"""
+        lines = text.split('\n')
+        suggestions = []
+
+        for i, line in enumerate(lines):
+            score = 0
+
+            if self._looks_like_title(line):
+                score += 2
+
+            if i > 0 and not lines[i - 1].strip() and len(line.strip()) > 0:
+                score += 1.5
+
+            if re.match(r'^[\*\-=]{3,}$', line.strip()):
+                suggestions.append(max(0, i - 1))
+                continue
+
+            if re.match(r'^\s*[\d]+[\.\)]\s*[A-ZА-Я]', line):
+                score += 1
+
+            if i > 0 and not lines[i - 1].strip() and line.strip() and line.strip()[0].isupper():
+                score += 0.5
+
+            if score >= 1.5:
+                suggestions.append(i)
+
+        if suggestions:
+            filtered = [suggestions[0]]
+            for s in suggestions[1:]:
+                if s - filtered[-1] > 3:
+                    filtered.append(s)
+            suggestions = filtered
+
+        return suggestions
+
+    def _looks_like_title(self, line: str) -> bool:
+        """Simple heuristic to recognize title lines"""
+        line = line.strip()
+        if not line or len(line) > 150:
+            return False
+
+        if line.endswith(('.', '!', '?', ':', ',')):
+            return False
+
+        if not line[0].isupper():
+            return False
+
+        if line.isupper():
+            return False
+
+        return True
+
+
+# =============================================================================
+# LITERARY ASSESSOR
+# =============================================================================
+
+class LiteraryAssessor:
+    """Multi-perspective literary assessment"""
+
+    @staticmethod
+    def assess(structural: StructuralAnalysis) -> LiteraryAssessment:
+        """Literary assessment based on structural analysis"""
+
+        # German perspective - formal perfection
+        german_score = 0
+        if structural.rhyme_pattern in ['ABAB', 'AABB', 'ABBA', 'ABCABC']:
+            german_score += 2
+        if 8 <= structural.avg_syllables <= 12:
+            german_score += 2
+        if structural.prosodic_consistency > 0.8:
+            german_score += 1
+
+        # Persian tradition - classical forms
+        persian_score = 0
+        if structural.aruz_analysis.identified_meter != "unknown":
+            persian_score += 2
+        if structural.stanza_structure in ['ghazal', 'qasida', 'rubaiyat']:
+            persian_score += 2
+        if structural.prosodic_consistency > 0.7:
+            persian_score += 1
+
+        # Tajik elements
+        tajik_score = 0
+        if structural.lines >= 4:
+            tajik_score += 1
+        if structural.stanza_structure in ['ghazal', 'rubaiyat']:
+            tajik_score += 2
+
+        # Modernist features
+        modern_score = 0
+        if structural.stanza_structure == "free_verse":
+            modern_score += 2
+        if structural.prosodic_consistency < 0.5:
+            modern_score += 1
+
+        return LiteraryAssessment(
+            german_perspective=min(5, german_score),
+            persian_tradition=min(5, persian_score),
+            tajik_elements=min(5, tajik_score),
+            modernist_features=min(5, modern_score)
+        )
+
+
+# =============================================================================
+# QUALITY VALIDATOR
+# =============================================================================
+
+class QualityValidator:
+    """Validate analysis quality for scientific rigor"""
+
+    @staticmethod
+    def validate_analysis(analysis: ComprehensiveAnalysis) -> Dict[str, Any]:
+        """Validate analysis quality"""
+        warnings = []
+        recommendations = []
+        quality_score = 1.0
+
+        if analysis.structural.meter_confidence == MeterConfidence.NONE:
+            warnings.append("No reliable meter detected")
+            recommendations.append("Manual prosodic verification recommended")
+            quality_score *= 0.7
+
+        if analysis.structural.prosodic_consistency < 0.5:
+            warnings.append("Low prosodic consistency")
+            recommendations.append("Check for textual corruption or free verse intention")
+            quality_score *= 0.8
+
+        if analysis.structural.lines < 2:
+            warnings.append("Very short poem")
+            recommendations.append("Statistical analysis not reliable for single lines")
+            quality_score *= 0.5
+
+        reliability = "high" if quality_score > 0.8 else "medium" if quality_score > 0.6 else "low"
+
+        return {
+            'quality_score': round(quality_score, 2),
+            'reliability': reliability,
+            'warnings': warnings,
+            'recommendations': recommendations,
+            'timestamp': datetime.now().isoformat()
+        }
+
+
+# =============================================================================
+# EXCEL REPORTER
+# =============================================================================
+
+class ExcelReporter:
+    """Excel report generation"""
+
+    def __init__(self):
+        self.header_font = Font(bold=True, color="FFFFFF")
+        self.header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+        self.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+        self.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    def create_report(self, results: List[Dict[str, Any]], filename: str = "tajik_poetry_analysis.xlsx"):
+        """Create Excel report"""
+        try:
+            wb = openpyxl.Workbook()
+            self._create_overview_sheet(wb, results)
+            self._create_structural_sheet(wb, results)
+            self._create_quality_sheet(wb, results)
+
+            wb.save(filename)
+            logger.info(f"Report saved as: {filename}")
+
+        except Exception as e:
+            logger.error(f"Error creating report: {e}")
+            raise
+
+    def _create_overview_sheet(self, wb: openpyxl.Workbook, results: List[Dict[str, Any]]):
+        """Create overview sheet"""
+        ws = wb.active
+        ws.title = "Overview"
+
+        headers = [
+            "ID", "Title", "Lines", "Meter", "Confidence", "Rhyme Pattern",
+            "Stanza Form", "Avg Syllables", "Quality Score"
+        ]
+
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num, value=header)
+            cell.font = self.header_font
+            cell.fill = self.header_fill
+            cell.border = self.border
+
+        for row_num, result in enumerate(results, 2):
+            analysis = result["analysis"]
+            validation = result.get("validation", {})
+
+            values = [
+                result["poem_id"],
+                result["title"],
+                analysis.structural.lines,
+                analysis.structural.aruz_analysis.identified_meter,
+                analysis.structural.meter_confidence.value,
+                analysis.structural.rhyme_pattern,
+                analysis.structural.stanza_structure,
+                analysis.structural.avg_syllables,
+                validation.get("quality_score", "N/A")
+            ]
+
+            for col_num, value in enumerate(values, 1):
+                cell = ws.cell(row=row_num, column=col_num, value=value)
+                cell.border = self.border
+
+    def _create_structural_sheet(self, wb: openpyxl.Workbook, results: List[Dict[str, Any]]):
+        """Create structural analysis sheet"""
+        ws = wb.create_sheet(title="Structural Analysis")
+
+        headers = [
+            "Poem ID", "Line #", "Line Text", "Syllables", "Meter Pattern",
+            "Qāfiyeh", "Radīf", "Rhyme Type"
+        ]
+
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num, value=header)
+            cell.font = self.header_font
+            cell.fill = self.header_fill
+
+        row_num = 2
+        for result in results:
+            poem_id = result["poem_id"]
+            content = result["content"]
+            structural = result["analysis"].structural
+
+            lines = [line.strip() for line in content.split('\n') if line.strip()]
+
+            for line_idx, line in enumerate(lines):
+                syllable_count = structural.syllables_per_line[line_idx] if line_idx < len(
+                    structural.syllables_per_line) else 0
+
+                if line_idx < len(structural.syllable_patterns):
+                    pattern = ''.join([s.weight.value for s in structural.syllable_patterns[line_idx]])
+                else:
+                    pattern = ""
+
+                if line_idx < len(structural.rhyme_scheme):
+                    rhyme = structural.rhyme_scheme[line_idx]
+                    qafiyeh = rhyme.qafiyeh
+                    radif = rhyme.radif
+                    rhyme_type = rhyme.rhyme_type
+                else:
+                    qafiyeh = radif = rhyme_type = ""
+
+                values = [
+                    poem_id, line_idx + 1, line, syllable_count, pattern,
+                    qafiyeh, radif, rhyme_type
+                ]
+
+                for col_num, value in enumerate(values, 1):
+                    ws.cell(row=row_num, column=col_num, value=value)
+
+                row_num += 1
+
+    def _create_quality_sheet(self, wb: openpyxl.Workbook, results: List[Dict[str, Any]]):
+        """Create quality metrics sheet"""
+        ws = wb.create_sheet(title="Quality Metrics")
+
+        headers = ["Poem ID", "Quality Score", "Reliability", "Warnings", "Recommendations"]
+
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num, value=header)
+            cell.font = self.header_font
+            cell.fill = self.header_fill
+
+        for row_num, result in enumerate(results, 2):
+            validation = result.get("validation", {})
+
+            values = [
+                result["poem_id"],
+                validation.get("quality_score", "N/A"),
+                validation.get("reliability", "N/A"),
+                "; ".join(validation.get("warnings", [])),
+                "; ".join(validation.get("recommendations", []))
+            ]
+
+            for col_num, value in enumerate(values, 1):
+                ws.cell(row=row_num, column=col_num, value=value)
+
+
+# =============================================================================
+# MAIN ANALYZER
+# =============================================================================
+
+class TajikPoemAnalyzer:
+    """Main analyzer class coordinating all components"""
+
+    def __init__(self, config: Optional[AnalysisConfig] = None):
+        self.config = config or AnalysisConfig()
+        self.structural_analyzer = StructuralAnalyzer(self.config)
+        self.excel_reporter = ExcelReporter()
+
+        logger.info("TajikPoemAnalyzer initialized")
+
+    def analyze_poem(self, poem_content: str) -> ComprehensiveAnalysis:
+        """Perform comprehensive analysis of a single poem"""
+        if not poem_content or len(poem_content.strip()) < self.config.min_poem_length:
+            raise ValueError("Poem content is too short or empty")
+
+        structural = self.structural_analyzer.analyze(poem_content)
+        literary = LiteraryAssessor.assess(structural)
+
+        analysis = ComprehensiveAnalysis(
+            structural=structural,
+            literary=literary,
+            quality_metrics={}
+        )
+
+        validation = QualityValidator.validate_analysis(analysis)
+        analysis.quality_metrics = validation
+
+        return analysis
+
+    def analyze_text(self, text: str) -> List[Dict[str, Any]]:
+        """Analyze text containing multiple poems"""
+        poems = self._split_poems(text)
+        logger.info(f"Found {len(poems)} poems to analyze")
+
+        results = []
+        for poem in poems:
+            try:
+                analysis = self.analyze_poem(poem.content)
+                validation = QualityValidator.validate_analysis(analysis)
+
+                results.append({
+                    "poem_id": poem.poem_id,
+                    "title": poem.title,
+                    "content": poem.content,
+                    "analysis": analysis,
+                    "validation": validation
+                })
+            except Exception as e:
+                logger.error(f"Error analyzing poem {poem.poem_id}: {e}")
+                continue
+
+        return results
+
+    def analyze_file(self, filepath: str, output_file: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Analyze poems from a file"""
+        try:
+            file_path = Path(filepath)
+            if not file_path.exists():
+                raise FileNotFoundError(f"File not found: {filepath}")
+
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+
+            results = self.analyze_text(text)
+
+            if output_file is None:
+                output_file = f"{file_path.stem}_analysis.xlsx"
+
+            self.excel_reporter.create_report(results, output_file)
+
+            logger.info(f"Analysis complete. Results saved to {output_file}")
+            return results
+
+        except Exception as e:
+            logger.error(f"Error analyzing file {filepath}: {e}")
+            raise
+
+    def _split_poems(self, text: str) -> List[PoemData]:
+        """Split text into individual poems"""
+        text = unicodedata.normalize('NFC', text)
+
+        separators = [
+            r'\*{5,}', r'-{5,}', r'={5,}', r'_{5,}',
+            r'#+\s*\d+\s*#+', r'\n\s*\n\s*\n+'
+        ]
+
+        pattern = '|'.join(separators)
+        blocks = re.split(pattern, text)
+
+        poems = []
+        for i, block in enumerate(blocks, 1):
+            block = block.strip()
+            if len(block) < self.config.min_poem_length:
+                continue
+
+            lines = block.split('\n')
+            if lines:
+                first_line = lines[0].strip()
+                if (self.config.min_title_length <= len(first_line) <= self.config.max_title_length
+                        and not first_line.endswith(('.', '!', '?'))):
+                    title = first_line
+                    content = '\n'.join(lines[1:]).strip()
+                else:
+                    title = f"Poem {i}"
+                    content = block
+
+                poems.append(PoemData(
+                    title=title,
+                    content=content,
+                    poem_id=f"poem_{i:03d}"
+                ))
+
+        return poems
+
+
+# =============================================================================
+# MAIN FUNCTION
+# =============================================================================
+
+def main():
+    """Main function demonstrating the analyzer"""
+    sample_text = """
+Дар кӯҳсори ватан гулҳо мешукуфанд,
+Дили ошиқ аз муҳаббат меларзад.
+Баҳори нав ба замин таҷдид меорад,
+Навиди хушҳолии мардум мерасад.
+
+*****
+
+Эй ватан, эй модари меҳрубон,
+Дар оғӯши ту ёфтам ҷон.
+Кӯҳҳои ту сари фалак расида,
+Дарёҳои ту ҷовидон.
+"""
+
+    try:
+        analyzer = TajikPoemAnalyzer()
+        results = analyzer.analyze_text(sample_text)
+
+        print("=== TAJIK POETRY ANALYZER ===\n")
+        print(f"Analyzed {len(results)} poems successfully\n")
+
+        for result in results:
+            analysis = result["analysis"]
+            print(f"--- {result['title']} ---")
+            print(f"  Lines: {analysis.structural.lines}")
+            print(f"  Meter: {analysis.structural.aruz_analysis.identified_meter}")
+            print(f"  Confidence: {analysis.structural.meter_confidence.value}")
+            print(f"  Rhyme Pattern: {analysis.structural.rhyme_pattern}")
+            print(f"  Stanza Form: {analysis.structural.stanza_structure}")
+            print(f"  Quality Score: {result['validation']['quality_score']}")
+            print()
+
+    except Exception as e:
+        logger.error(f"Error in main: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+if __name__ == "__main__":
+    main()
