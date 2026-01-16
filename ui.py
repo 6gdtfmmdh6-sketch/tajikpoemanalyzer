@@ -352,13 +352,18 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
     content = analysis.content
     validation = analysis.quality_metrics
     
-    # Create title with badge text
-    if structural.is_free_verse:
-        title = f"Poem {poem_num} - Enhanced Analysis - {content.total_words} words [Free Verse]"
-    else:
-        title = f"Poem {poem_num} - Enhanced Analysis - {content.total_words} words [Classical Form]"
+    # Create title
+    title = f"Poem {poem_num} - Enhanced Analysis - {content.total_words} words"
     
-    with st.expander(f"Poem {poem_num} - Enhanced Analysis - {content.total_words} words {badge}", expanded=True, unsafe_allow_html=True):
+    with st.expander(title, expanded=True):
+        # Display badge inside expander
+        if structural.is_free_verse:
+            st.markdown('<span class="free-verse-badge">Free Verse Detected</span>', unsafe_allow_html=True)
+        else:
+            st.markdown('<span class="classical-badge">Classical Form</span>', unsafe_allow_html=True)
+        
+        # Content
+        st.subheader("Content")
         # Content
         st.subheader("Content")
         st.text(poem_text[:500] + "..." if len(poem_text) > 500 else poem_text)
