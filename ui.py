@@ -15,6 +15,7 @@ import tempfile
 import re
 from typing import List, Optional, Dict, Any
 import logging
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +32,8 @@ try:
         MeterConfidence,
         StructuralAnalysis,
         EnhancedPoemSplitter,
-        QualityValidator
+        QualityValidator,
+        ExcelReporter
     )
     ANALYZER_AVAILABLE = True
     logger.info("Analyzer loaded successfully")
@@ -532,6 +534,54 @@ def main():
                             )
                     
                     st.success("✅ Analysis completed!")
+                    
+                    # Generate Excel Report
+                    if successful > 0:
+                        st.markdown("---")
+                        st.subheader("📥 Download Report")
+                        
+                        try:
+                            # Prepare data for ExcelReporter
+                            excel_data = []
+                            for result in all_results:
+                                if result['success']:
+                                    # Extract title from first line
+                                    first_line = result['poem_text'].split('\n')[0].strip()
+                                    title = first_line[:50] if len(first_line) > 50 else first_line
+                                    
+                                    # Validate analysis
+                                    validation = QualityValidator.validate_analysis(result['analysis'])
+                                    
+                                    excel_data.append({
+                                        'poem_id': f"P{result['poem_num']:03d}",
+                                        'title': title,
+                                        'content': result['poem_text'],
+                                        'analysis': result['analysis'],
+                                        'validation': validation
+                                    })
+                            
+                            # Create Excel report
+                            excel_reporter = ExcelReporter()
+                            excel_filename = f"tajik_poetry_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                            excel_path = Path(tempfile.gettempdir()) / excel_filename
+                            excel_reporter.create_report(excel_data, str(excel_path))
+                            
+                            # Provide download button
+                            with open(excel_path, 'rb') as f:
+                                excel_bytes = f.read()
+                            
+                            st.download_button(
+                                label="📊 Download Excel Report",
+                                data=excel_bytes,
+                                file_name=excel_filename,
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            )
+                            
+                            st.info(f"Report contains {len(excel_data)} poems with structural analysis, quality metrics, and more.")
+                            
+                        except Exception as e:
+                            logger.error(f"Error creating Excel report: {e}")
+                            st.error(f"Could not create Excel report: {e}")
                     
                     if st.button("🔄 Start over"):
                         st.session_state.splitters = []
