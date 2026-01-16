@@ -3,7 +3,7 @@
 Simple Web-UI for Tajik Poetry Analyzer
 Supports PDF upload and analysis
 """
-
+from app2 import TajikPoemAnalyzer, AnalysisConfig, PoemData, EnhancedPoemSplitter
 import streamlit as st
 from pathlib import Path
 import tempfile
