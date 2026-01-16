@@ -1,201 +1,200 @@
 # Tajik Poetry Analyzer
-
-Wissenschaftliches Tool zur Analyse tadschikischer/persischer Poesie mit Aruz-Metrik-Analyse, phonetischer Transkription und PDF/OCR-Unterstützung.
-
+ 
+Scientific tool for analyzing Tajik/Persian poetry with Aruz metric analysis, phonetic transcription, and PDF/OCR support.
+ 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-
+ 
 ## Features
-
-### Kern-Features
-- ✅ **Wissenschaftliche Aruz-Metrik-Analyse** - 8 klassische Bahren (Hazaj, Ramal, Mutaqarib, Rajaz, Kamil, Tawil, Basit, Wafir)
-- ✅ **Phonetische Transkription** - Persisch/Tajik Phonem-Mapping
-- ✅ **Reimschema-Erkennung** - Qafiyeh/Radif Analyse
-- ✅ **Strukturanalyse** - Zeilen, Silben, Strophenformen
-- ✅ **Inhaltsanalyse** - Worte, Themen, Neologismen, Archaismen
-- ✅ **Lexikon-basierte Analyse** - 1.4MB Tajik-Lexikon
-- ✅ **Korpus-Validierung** - 404MB Tajik-Korpus (via Git LFS)
-
+ 
+### Core Features
+- **Scientific Aruz Metric Analysis** - 8 classical meters (Hazaj, Ramal, Mutaqarib, Rajaz, Kamil, Tawil, Basit, Wafir)
+- **Phonetic Transcription** - Persian/Tajik phoneme mapping
+- **Rhyme Scheme Detection** - Qafiyeh/Radif analysis
+- **Structural Analysis** - Lines, syllables, stanza forms
+- **Content Analysis** - Words, themes, neologisms, archaisms
+- **Lexicon-based Analysis** - 1.4MB Tajik lexicon
+- **Corpus Validation** - 404MB Tajik corpus (via Git LFS)
+ 
 ### PDF/OCR Features
-- 🆕 **PDF-Textextraktion** - Normale PDFs mit PyPDF2
-- 🆕 **OCR für gescannte PDFs** - Tesseract mit Farsi/Tajik/Russisch
-- 🆕 **Web-UI** - Streamlit Browser-Interface für PDF-Upload
-- 🆕 **Automatische Encoding-Erkennung**
-- 🆕 **Bidirektionale Textunterstützung** - Arabisch/Persisch
-
+- **PDF Text Extraction** - Normal PDFs with PyPDF2
+- **OCR for Scanned PDFs** - Tesseract with Farsi/Tajik/Russian
+- **Web UI** - Streamlit browser interface for PDF upload
+- **Automatic Encoding Detection**
+- **Bidirectional Text Support** - Arabic/Persian
+ 
 ## Installation
-
-### 1. Repository klonen
+ 
+### 1. Clone Repository
 ```bash
 git clone https://github.com/6gdtfmmdh6-sketch/tajikpoemanalyzer.git
 cd tajikpoemanalyzer
 ```
-
-### 2. Git LFS installieren (für Korpus-Datei)
+ 
+### 2. Install Git LFS (for corpus file)
 ```bash
 # macOS
 brew install git-lfs
-
+ 
 # Ubuntu/Debian
 sudo apt-get install git-lfs
-
-# Git LFS initialisieren
+ 
+# Initialize Git LFS
 git lfs install
 git lfs pull
 ```
-
+ 
 ### 3. Python Dependencies
 ```bash
 pip install -r requirements.txt
 ```
-
-### 4. System-Dependencies für OCR (Optional)
+ 
+### 4. System Dependencies for OCR (Optional)
 ```bash
 # macOS
 brew install poppler tesseract tesseract-lang
-
+ 
 # Ubuntu/Debian
 sudo apt-get install poppler-utils tesseract-ocr tesseract-ocr-fas tesseract-ocr-rus
 ```
-
-## Verwendung
-
-### Web-UI (Empfohlen)
+ 
+## Usage
+ 
+### Web UI (Recommended)
 ```bash
 streamlit run ui.py
 ```
-
-Dann im Browser:
-1. PDF hochladen
-2. "Analyse starten" klicken
-3. Ergebnisse ansehen
-
-### Kommandozeile
+ 
+Then in browser:
+1. Upload PDF
+2. Click "Start Analysis"
+3. View results
+ 
+### Command Line
 ```python
 from app2 import TajikPoemAnalyzer, AnalysisConfig
 from pdf_handler import read_file_with_pdf_support
-
-# PDF lesen
-text = read_file_with_pdf_support('gedichte.pdf')
-
-# Analyzer initialisieren
+ 
+# Read PDF
+text = read_file_with_pdf_support('poems.pdf')
+ 
+# Initialize analyzer
 config = AnalysisConfig(lexicon_path='data/tajik_lexicon.json')
 analyzer = TajikPoemAnalyzer(config=config)
-
-# Analysieren
+ 
+# Analyze
 for poem_text in text.split('\n\n'):
     if len(poem_text) > 20:
         analysis = analyzer.analyze_poem(poem_text)
-        print(f"Aruz-Metrum: {analysis.structural.aruz_analysis.identified_meter}")
-        print(f"Reimschema: {analysis.structural.rhyme_pattern}")
+        print(f"Aruz Meter: {analysis.structural.aruz_analysis.identified_meter}")
+        print(f"Rhyme Scheme: {analysis.structural.rhyme_pattern}")
 ```
-
-### Beispiel ausführen
+ 
+### Run Example
 ```bash
 python3 example_usage.py
 ```
-
-## Projektstruktur
-
+ 
+## Project Structure
+ 
 ```
 tajikpoemanalyzer/
-├── ui.py                      # Streamlit Web-UI
-├── app2.py                    # Haupt-Analyzer (85KB)
-├── pdf_handler.py             # PDF/OCR Integration
-├── ocr_processor.py           # OCR Engine
-├── phonetic_utils.py          # Phonetische Utilities
+├── ui.py                      # Streamlit Web UI
+├── app2.py                    # Main analyzer (85KB)
+├── pdf_handler.py             # PDF/OCR integration
+├── ocr_processor.py           # OCR engine
+├── phonetic_utils.py          # Phonetic utilities
 ├── data/
-│   ├── tajik_lexicon.json     # 1.4MB Lexikon
-│   ├── tajik_corpus.txt       # 404MB Korpus (Git LFS)
-│   └── poems.txt              # Beispiele
+│   ├── tajik_lexicon.json     # 1.4MB lexicon
+│   ├── tajik_corpus.txt       # 404MB corpus (Git LFS)
+│   └── poems.txt              # Examples
 ├── tests/
 │   └── test_validation_suite.py
 └── requirements.txt
 ```
-
-## Analyse-Ergebnisse
-
-Der Analyzer liefert:
-- **Strukturell**: Zeilen, Silben, Strophen, Aruz-Metrum, Reimschema
-- **Inhaltlich**: Worte, Themen, Neologismen, Archaismen
-- **Qualität**: Literarische Bewertung
-- **Theoretisch**: Übersetzungstheorie (Ette/Bachmann-Medick), Semiotik (Lotman)
-
+ 
+## Analysis Results
+ 
+The analyzer provides:
+- **Structural**: Lines, syllables, stanzas, Aruz meter, rhyme scheme
+- **Content**: Words, themes, neologisms, archaisms
+- **Quality**: Literary evaluation
+- **Theoretical**: Translation theory (Ette/Bachmann-Medick), Semiotics (Lotman)
+ 
 ## Tests
-
+ 
 ```bash
-# Workflow-Test
+# Workflow test
 python3 test_complete_workflow.py
-
-# Alle Tests
+ 
+# All tests
 pytest tests/
 ```
-
-## Daten-Dateien
-
-### Lexikon (1.4 MB)
-- **Zweck**: Wörterbuch für Wort-Analyse
-- **Inhalt**: Tadschikische Wörter
-- **Status**: ✅ In Git enthalten
-
-### Korpus (404 MB)
-- **Zweck**: Statistische Analyse
-- **Inhalt**: Tadschikischer Text-Korpus
-- **Status**: ⚠️ Via Git LFS (nach `git lfs pull` verfügbar)
-
-## Technische Details
-
-### Aruz-Metrik
-Das System implementiert klassische persische Prosodie:
+ 
+## Data Files
+ 
+### Lexicon (1.4 MB)
+- **Purpose**: Dictionary for word analysis
+- **Content**: Tajik words
+- **Status**: Included in Git
+ 
+### Corpus (404 MB)
+- **Purpose**: Statistical analysis
+- **Content**: Tajik text corpus
+- **Status**: Via Git LFS (available after `git lfs pull`)
+ 
+## Technical Details
+ 
+### Aruz Metrics
+The system implements classical Persian prosody:
 - Hazaj, Ramal, Mutaqarib, Rajaz, Kamil, Tawil, Basit, Wafir
-- Silbengewicht-Berechnung (schwer/leicht)
-- Pattern-Matching mit Konfidenz-Scores
-
+- Syllable weight calculation (heavy/light)
+- Pattern matching with confidence scores
+ 
 ### OCR
-- Tesseract mit Farsi/Tajik/Russisch Support
-- Automatische Erkennung gescannter PDFs
-- Async-Verarbeitung für Performance
-
-## Zusammenarbeit
-
-Für deine Mitarbeiter:
-
+- Tesseract with Farsi/Tajik/Russian support
+- Automatic detection of scanned PDFs
+- Async processing for performance
+ 
+## Collaboration
+ 
+For collaborators:
+ 
 ```bash
-# Repository klonen
+# Clone repository
 git clone https://github.com/6gdtfmmdh6-sketch/tajikpoemanalyzer.git
 cd tajikpoemanalyzer
-
-# Git LFS installieren und Korpus herunterladen
-brew install git-lfs  # oder apt-get install git-lfs
+ 
+# Install Git LFS and download corpus
+brew install git-lfs  # or apt-get install git-lfs
 git lfs install
 git lfs pull
-
-# Dependencies installieren
+ 
+# Install dependencies
 pip install -r requirements.txt
-
-# UI starten
+ 
+# Start UI
 streamlit run ui.py
 ```
-
-## Dokumentation
-
-- [QUICK_START.md](QUICK_START.md) - Schnellstart-Anleitung
-- [HOW_TO_RUN.md](HOW_TO_RUN.md) - Ausführliche Anleitung
-- [DATA_README.md](DATA_README.md) - Informationen zu Daten-Dateien
-
-## Lizenz
-
+ 
+## Documentation
+ 
+- [HOW_TO_RUN.md](HOW_TO_RUN.md) - Detailed instructions
+- [DATA_README.md](DATA_README.md) - Information about data files
+ 
+## License
+ 
 MIT License
-
+ 
 ## Credits
-
-- Original Analyzer: Wissenschaftliche Implementierung mit echter Aruz-Analyse
-- PDF/OCR Integration: Erweiterte Funktionalität für digitale Korpora
-- Korpus: Tadschikische Textsammlung (404MB)
-
+ 
+- Original Analyzer: Scientific implementation with authentic Aruz analysis
+- PDF/OCR Integration: Extended functionality for digital corpora
+- Corpus: Tajik text collection (404MB)
+ 
 ## Support
-
-Bei Problemen:
-1. Siehe [HOW_TO_RUN.md](HOW_TO_RUN.md) für Troubleshooting
-2. Teste mit `python3 test_complete_workflow.py`
-3. Erstelle ein Issue auf GitHub
+ 
+For issues:
+1. See [HOW_TO_RUN.md](HOW_TO_RUN.md) for troubleshooting
+2. Test with `python3 test_complete_workflow.py`
+3. Create an issue on GitHub
