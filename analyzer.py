@@ -9,9 +9,10 @@ This implementation provides:
 3. Accurate syllable weight calculation
 4. Scientific error handling and validation
 5. Excel report generation
+6. Free verse detection and modern metrics
+7. Corpus contribution capabilities
 
 Consolidated from app2.py and enhanced_tajik_analyzer.py
-Removed: ContentAnalyzer, LotmanSemioticAnalyzer, TranslationTheoreticalAnalyzer, SemanticFieldAnalyzer
 """
 
 import re
@@ -24,6 +25,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any, Set
 from enum import Enum
 from datetime import datetime
+import statistics
 
 import openpyxl
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
@@ -191,6 +193,46 @@ class ComprehensiveAnalysis:
 
 
 # =============================================================================
+# MODERN VERSE ANALYSIS DATACLASSES
+# =============================================================================
+
+@dataclass
+class ModernVerseMetrics:
+    """Metrics for modern/free verse poetry"""
+    enjambement_count: int = 0
+    enjambement_ratio: float = 0.0
+    semantic_density: float = 0.0  # Words per line
+    line_length_variation: float = 0.0  # CV of syllables per line
+    prose_poetry_score: float = 0.0
+    visual_structure_score: float = 0.0
+    caesura_distribution: List[int] = field(default_factory=list)
+    syntactic_parallelism: float = 0.0
+    lexical_repetition_score: float = 0.0
+    breath_group_length: float = 0.0  # Average sentence length in words
+    pause_frequency: float = 0.0  # Punctuation per line
+
+
+@dataclass
+class EnhancedStructuralAnalysis(StructuralAnalysis):
+    """Enhanced structural analysis with modern metrics"""
+    modern_metrics: Optional[ModernVerseMetrics] = None
+    is_free_verse: bool = False
+    free_verse_confidence: float = 0.0
+    modern_features: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class EnhancedComprehensiveAnalysis:
+    """Enhanced comprehensive analysis results"""
+    structural: EnhancedStructuralAnalysis
+    content: ContentAnalysis
+    literary: LiteraryAssessment
+    quality_metrics: Dict[str, float]
+    corpus_ready: bool = False
+    contribution_id: Optional[str] = None
+
+
+# =============================================================================
 # PHONETICS
 # =============================================================================
 
@@ -212,10 +254,10 @@ class PersianTajikPhonetics:
             'е': 'e',
             # Arabic script consonants
             'ب': 'b', 'پ': 'p', 'ت': 't', 'ث': 's', 'ج': 'ʤ', 'چ': 'ʧ',
-            'ح': 'ħ', 'خ': 'x', 'د': 'd', 'ذ': 'z', 'ر': 'r', 'ز': 'z',
-            'ژ': 'ʒ', 'س': 's', 'ش': 'ʃ', 'ص': 's', 'ض': 'z', 'ط': 't',
-            'ظ': 'z', 'ع': 'ʔ', 'غ': 'ɣ', 'ف': 'f', 'ق': 'q', 'ک': 'k',
-            'گ': 'g', 'ل': 'l', 'م': 'm', 'ن': 'n', 'و': 'w', 'ه': 'h',
+            'ح': 'ħ', 'خ': 'x', 'д': 'd', 'ذ': 'z', 'р': 'r', 'з': 'z',
+            'ژ': 'ʒ', 'س': 's', 'ш': 'ʃ', 'ص': 's', 'ض': 'z', 'ط': 't',
+            'ظ': 'z', 'ع': 'ʔ', 'غ': 'ɣ', 'ф': 'f', 'ق': 'q', 'к': 'k',
+            'گ': 'g', 'ل': 'l', 'м': 'm', 'н': 'n', 'و': 'w', 'ه': 'h',
             'ی': 'j',
         }
 
@@ -618,6 +660,275 @@ class AruzMeterAnalyzer:
             line_scansion=[],
             caesura_positions=[]
         )
+
+
+# =============================================================================
+# MODERN VERSE ANALYZER
+# =============================================================================
+
+class ModernVerseAnalyzer:
+    """Analyzer for modern/free verse poetry"""
+
+    def __init__(self):
+        self.punctuation = set('.,!?;:—–-()[]{}"\'«»')
+        self.sentence_enders = set('.!?;')
+        self.prose_words = {'ва', 'ки', 'дар', 'бо', 'аз', 'то', 'барои', 'аммо', 'лекин'}
+
+    def analyze(self, poem_content: str, syllable_counts: List[int] = None) -> ModernVerseMetrics:
+        """Comprehensive analysis of free verse"""
+        lines = [line.rstrip() for line in poem_content.split('\n') if line.strip()]
+
+        if not lines:
+            return ModernVerseMetrics()
+
+        # Initialize metrics
+        metrics = ModernVerseMetrics()
+
+        # Enjambement analysis
+        metrics.enjambement_count = self._count_enjambements(lines)
+        metrics.enjambement_ratio = metrics.enjambement_count / max(len(lines) - 1, 1)
+
+        # Semantic density (words per line)
+        metrics.semantic_density = self._calculate_semantic_density(lines)
+
+        # Line length variation
+        if syllable_counts:
+            metrics.line_length_variation = self._calculate_line_variation(syllable_counts)
+        else:
+            # Fallback: characters per line
+            char_counts = [len(line) for line in lines]
+            if char_counts:
+                mean_val = statistics.mean(char_counts)
+                if mean_val != 0:
+                    stdev = statistics.stdev(char_counts) if len(char_counts) > 1 else 0
+                    metrics.line_length_variation = stdev / mean_val
+
+        # Prose-poetry score
+        metrics.prose_poetry_score = self._calculate_prose_poetry_score(lines)
+
+        # Visual structure
+        metrics.visual_structure_score = self._analyze_visual_structure(poem_content)
+
+        # Caesura distribution
+        metrics.caesura_distribution = self._analyze_caesura_distribution(lines)
+
+        # Syntactic parallelism
+        metrics.syntactic_parallelism = self._calculate_syntactic_parallelism(lines)
+
+        # Lexical repetition
+        metrics.lexical_repetition_score = self._calculate_lexical_repetition(lines)
+
+        # Breath group length
+        metrics.breath_group_length = self._analyze_breath_groups(poem_content)
+
+        # Pause frequency
+        metrics.pause_frequency = self._calculate_pause_frequency(lines)
+
+        return metrics
+
+    def _count_enjambements(self, lines: List[str]) -> int:
+        """Count enjambements (line breaks)"""
+        count = 0
+        for i in range(len(lines) - 1):
+            current_line = lines[i].strip()
+            next_line = lines[i + 1].strip()
+
+            if not current_line or not next_line:
+                continue
+
+            # Enjambement if line doesn't end with sentence ending punctuation
+            # AND next line doesn't start with uppercase (not a new sentence)
+            if (current_line[-1] not in self.sentence_enders and
+                    not next_line[0].isupper()):
+                count += 1
+
+        return count
+
+    def _calculate_semantic_density(self, lines: List[str]) -> float:
+        """Calculate semantic density (words per line)"""
+        word_counts = [len(re.findall(r'[\wӣӯ]+', line)) for line in lines]
+        return statistics.mean(word_counts) if word_counts else 0
+
+    def _calculate_line_variation(self, syllable_counts: List[int]) -> float:
+        """Calculate coefficient of variation of line lengths"""
+        if len(syllable_counts) < 2:
+            return 0
+
+        mean_val = statistics.mean(syllable_counts)
+        if mean_val == 0:
+            return 0
+
+        stdev = statistics.stdev(syllable_counts)
+        return stdev / mean_val
+
+    def _calculate_prose_poetry_score(self, lines: List[str]) -> float:
+        """Calculate prose-poetry score (0 = purely poetic, 1 = prosaic)"""
+        if not lines:
+            return 0
+
+        scores = []
+
+        for line in lines:
+            # Shorter lines are more poetic
+            length_score = min(1.0, len(line) / 100)
+
+            # Punctuation at end = more prosaic
+            punctuation_score = 1.0 if line[-1] in self.sentence_enders else 0
+
+            # Contains everyday language?
+            words = set(re.findall(r'[\wӣӯ]+', line.lower()))
+            prose_word_score = len(words & self.prose_words) / max(len(words), 1)
+
+            line_score = (length_score * 0.3 +
+                         punctuation_score * 0.4 +
+                         prose_word_score * 0.3)
+            scores.append(line_score)
+
+        return statistics.mean(scores) if scores else 0
+
+    def _analyze_visual_structure(self, poem_content: str) -> float:
+        """Analyze visual structure (indentations, blank lines)"""
+        lines = poem_content.split('\n')
+
+        if len(lines) < 2:
+            return 0
+
+        # Count indentations
+        indent_count = 0
+        for line in lines:
+            if line.startswith((' ', '\t')) and line.strip():
+                indent_count += 1
+
+        # Count blank line blocks
+        empty_line_blocks = 0
+        in_empty_block = False
+
+        for line in lines:
+            if not line.strip():
+                if not in_empty_block:
+                    empty_line_blocks += 1
+                    in_empty_block = True
+            else:
+                in_empty_block = False
+
+        visual_score = (indent_count / len(lines) * 0.5 +
+                       empty_line_blocks / len(lines) * 0.5)
+
+        return min(1.0, visual_score)
+
+    def _analyze_caesura_distribution(self, lines: List[str]) -> List[int]:
+        """Analyze caesura distribution"""
+        caesura_positions = []
+
+        for i, line in enumerate(lines):
+            if ',' in line or '—' in line or '–' in line or ';' in line:
+                caesura_positions.append(i)
+
+        return caesura_positions
+
+    def _calculate_syntactic_parallelism(self, lines: List[str]) -> float:
+        """Calculate syntactic parallelism"""
+        if len(lines) < 2:
+            return 0
+
+        parallel_pairs = 0
+        total_pairs = 0
+
+        for i in range(len(lines) - 1):
+            line1 = lines[i].lower()
+            line2 = lines[i + 1].lower()
+
+            # Remove punctuation
+            line1 = re.sub(r'[^\wӣӯ\s]', '', line1)
+            line2 = re.sub(r'[^\wӣӯ\s]', '', line2)
+
+            # Count words
+            words1 = line1.split()
+            words2 = line2.split()
+
+            if len(words1) > 1 and len(words2) > 1:
+                # Check for similar word order (beginnings)
+                if words1[0] == words2[0]:
+                    parallel_pairs += 1
+                total_pairs += 1
+
+        return parallel_pairs / total_pairs if total_pairs > 0 else 0
+
+    def _calculate_lexical_repetition(self, lines: List[str]) -> float:
+        """Calculate lexical repetition"""
+        all_words = []
+        for line in lines:
+            words = re.findall(r'[\wӣӯ]+', line.lower())
+            all_words.extend(words)
+
+        if not all_words:
+            return 0
+
+        word_counts = {}
+        for word in all_words:
+            word_counts[word] = word_counts.get(word, 0) + 1
+
+        # Percentage of words that appear more than once
+        repeated_words = sum(1 for count in word_counts.values() if count > 1)
+        total_unique_words = len(word_counts)
+
+        return repeated_words / total_unique_words if total_unique_words > 0 else 0
+
+    def _analyze_breath_groups(self, poem_content: str) -> float:
+        """Analyze breath groups (sentence lengths)"""
+        # Find sentence endings
+        sentences = re.split(r'[.!?;]+', poem_content)
+        sentences = [s.strip() for s in sentences if s.strip()]
+
+        if not sentences:
+            return 0
+
+        # Words per sentence
+        words_per_sentence = []
+        for sentence in sentences:
+            words = re.findall(r'[\wӣӯ]+', sentence)
+            if words:
+                words_per_sentence.append(len(words))
+
+        return statistics.mean(words_per_sentence) if words_per_sentence else 0
+
+    def _calculate_pause_frequency(self, lines: List[str]) -> float:
+        """Calculate pause frequency (punctuation per line)"""
+        if not lines:
+            return 0
+
+        punctuation_count = 0
+        for line in lines:
+            punctuation_count += sum(1 for char in line if char in self.punctuation)
+
+        return punctuation_count / len(lines)
+
+
+class FreeVerseClassifier:
+    """Classifier for free verse poetry"""
+
+    @staticmethod
+    def is_free_verse(structural_analysis, modern_metrics: ModernVerseMetrics) -> bool:
+        """Determine if a poem is free verse"""
+        criteria = {
+            'meter_confidence_low': structural_analysis.meter_confidence.value in ['low', 'none'],
+            'prosodic_inconsistency': structural_analysis.prosodic_consistency < 0.5,
+            'enjambement_high': modern_metrics.enjambement_ratio > 0.3,
+            'line_variation_high': modern_metrics.line_length_variation > 0.4,
+            'prose_score_high': modern_metrics.prose_poetry_score > 0.6
+        }
+
+        weights = {
+            'meter_confidence_low': 2.0,
+            'prosodic_inconsistency': 1.5,
+            'enjambement_high': 1.0,
+            'line_variation_high': 1.0,
+            'prose_score_high': 0.5
+        }
+
+        score = sum(weights[k] for k, v in criteria.items() if v)
+
+        return score >= 2.5  # Threshold
 
 
 # =============================================================================
@@ -1035,6 +1346,433 @@ class ContentAnalyzer:
 
 
 # =============================================================================
+# ENHANCED TAJIK POEM ANALYZER
+# =============================================================================
+
+class EnhancedTajikPoemAnalyzer:
+    """
+    Enhanced analyzer with free verse detection and modern metrics
+    Works in parallel with classical TajikPoemAnalyzer
+    """
+
+    def __init__(self, config: Optional[AnalysisConfig] = None, enable_corpus: bool = True):
+        self.config = config or AnalysisConfig()
+        self.structural_analyzer = StructuralAnalyzer(self.config)
+        self.content_analyzer = ContentAnalyzer(self.config)
+        self.modern_analyzer = ModernVerseAnalyzer()
+        self.free_verse_classifier = FreeVerseClassifier()
+        self.excel_reporter = ExcelReporter()
+        self.enable_corpus = enable_corpus
+
+        logger.info("EnhancedTajikPoemAnalyzer initialized with free verse detection")
+
+    def analyze_poem(self, poem_content: str) -> EnhancedComprehensiveAnalysis:
+        """Perform enhanced analysis of a single poem"""
+        if not poem_content or len(poem_content.strip()) < self.config.min_poem_length:
+            raise ValueError("Poem content is too short or empty")
+
+        # Perform basic analysis
+        structural = self.structural_analyzer.analyze(poem_content)
+        content = self.content_analyzer.analyze(poem_content)
+        literary = LiteraryAssessor.assess(structural, content)
+
+        # Analyze modern metrics
+        modern_metrics = self.modern_analyzer.analyze(
+            poem_content,
+            structural.syllables_per_line
+        )
+
+        # Classify free verse
+        is_free_verse = self.free_verse_classifier.is_free_verse(
+            structural,
+            modern_metrics
+        )
+
+        # Enhance structural analysis
+        enhanced_structural = self._enhance_structural_analysis(
+            structural,
+            modern_metrics,
+            is_free_verse
+        )
+
+        # Create enhanced analysis
+        analysis = EnhancedComprehensiveAnalysis(
+            structural=enhanced_structural,
+            content=content,
+            literary=literary,
+            quality_metrics={},
+            corpus_ready=self.enable_corpus,
+            contribution_id=None
+        )
+
+        # Enhanced quality validation
+        validation = self._enhance_quality_metrics(
+            analysis,
+            modern_metrics
+        )
+        analysis.quality_metrics = validation
+
+        return analysis
+
+    def _enhance_structural_analysis(self, structural: StructuralAnalysis,
+                                   modern_metrics: ModernVerseMetrics,
+                                   is_free_verse: bool) -> EnhancedStructuralAnalysis:
+        """Enhance structural analysis for free verse"""
+        
+        # Simplify rhyme pattern for free verse
+        rhyme_pattern = structural.rhyme_pattern
+        if is_free_verse and len(rhyme_pattern) > 20:
+            unique_rhymes = len(set(rhyme_pattern))
+            rhyme_pattern = f"free_rhyme_{unique_rhymes}unique"
+        
+        # Adjust meter for free verse
+        identified_meter = structural.aruz_analysis.identified_meter
+        meter_confidence = structural.meter_confidence
+        
+        if is_free_verse and identified_meter == "ṭawīl":
+            # ṭawīl is often false-positive for free verse
+            identified_meter = "free_verse"
+            meter_confidence = MeterConfidence.LOW
+        elif is_free_verse:
+            identified_meter = "free_verse"
+        
+        # Extract modern features
+        modern_features = {
+            "enjambement_density": modern_metrics.enjambement_ratio,
+            "line_variation": modern_metrics.line_length_variation,
+            "prose_tendency": modern_metrics.prose_poetry_score,
+            "visual_complexity": modern_metrics.visual_structure_score,
+            "syntactic_parallelism": modern_metrics.syntactic_parallelism,
+            "lexical_repetition": modern_metrics.lexical_repetition_score
+        }
+        
+        return EnhancedStructuralAnalysis(
+            lines=structural.lines,
+            syllables_per_line=structural.syllables_per_line,
+            syllable_patterns=structural.syllable_patterns,
+            aruz_analysis=structural.aruz_analysis,
+            rhyme_scheme=structural.rhyme_scheme,
+            rhyme_pattern=rhyme_pattern,
+            stanza_structure=structural.stanza_structure,
+            avg_syllables=structural.avg_syllables,
+            prosodic_consistency=structural.prosodic_consistency,
+            meter_confidence=meter_confidence,
+            modern_metrics=modern_metrics,
+            is_free_verse=is_free_verse,
+            free_verse_confidence=self._calculate_free_verse_confidence(
+                structural, modern_metrics),
+            modern_features=modern_features
+        )
+
+    def _calculate_free_verse_confidence(self, structural: StructuralAnalysis,
+                                       modern_metrics: ModernVerseMetrics) -> float:
+        """Calculate confidence for free verse classification"""
+        indicators = [
+            (structural.prosodic_consistency < 0.4, 0.8),
+            (modern_metrics.enjambement_ratio > 0.3, 0.6),
+            (modern_metrics.line_length_variation > 0.5, 0.7),
+            (modern_metrics.prose_poetry_score > 0.6, 0.5),
+            (structural.meter_confidence.value in ['low', 'none'], 0.9)
+        ]
+        
+        confidence = sum(weight for condition, weight in indicators if condition)
+        return min(1.0, confidence / 2.5)  # Normalize
+
+    def _enhance_quality_metrics(self, analysis: EnhancedComprehensiveAnalysis,
+                               modern_metrics: ModernVerseMetrics) -> Dict[str, Any]:
+        """Enhanced quality validation"""
+        warnings = []
+        recommendations = []
+        quality_score = 1.0
+
+        if analysis.structural.meter_confidence == MeterConfidence.NONE:
+            warnings.append("No reliable meter detected")
+            recommendations.append("Manual prosodic verification recommended")
+            quality_score *= 0.7
+
+        if analysis.structural.prosodic_consistency < 0.5:
+            warnings.append("Low prosodic consistency")
+            recommendations.append("Check for textual corruption or free verse intention")
+            quality_score *= 0.8
+
+        if analysis.structural.lines < 2:
+            warnings.append("Very short poem")
+            recommendations.append("Statistical analysis not reliable for single lines")
+            quality_score *= 0.5
+
+        # Free verse specific assessments
+        if analysis.structural.is_free_verse:
+            free_verse_assessment = self._assess_free_verse_quality(
+                analysis.structural, modern_metrics)
+            
+            # Remove conflicting warnings
+            if "Low prosodic consistency" in warnings:
+                warnings.remove("Low prosodic consistency")
+                warnings.append("Free verse detected - prosodic analysis limited")
+            
+            free_verse_analysis = {
+                "confidence": analysis.structural.free_verse_confidence,
+                "enjambement_score": modern_metrics.enjambement_ratio,
+                "prose_poetry_score": modern_metrics.prose_poetry_score,
+                "line_variation_score": modern_metrics.line_length_variation,
+                "assessment": free_verse_assessment
+            }
+
+        reliability = "high" if quality_score > 0.8 else "medium" if quality_score > 0.6 else "low"
+
+        result = {
+            'quality_score': round(quality_score, 2),
+            'reliability': reliability,
+            'warnings': warnings,
+            'recommendations': recommendations,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        if analysis.structural.is_free_verse:
+            result['free_verse_analysis'] = free_verse_analysis
+            
+        return result
+
+    def _assess_free_verse_quality(self, structural: EnhancedStructuralAnalysis,
+                                 modern_metrics: ModernVerseMetrics) -> str:
+        """Assess quality of free verse"""
+        scores = []
+        
+        # Enjambement assessment
+        if 0.2 <= modern_metrics.enjambement_ratio <= 0.6:
+            scores.append(1.0)
+        else:
+            scores.append(0.5)
+            
+        # Line variation assessment
+        if 0.3 <= modern_metrics.line_length_variation <= 0.8:
+            scores.append(1.0)
+        else:
+            scores.append(0.5)
+            
+        # Visual structure
+        if modern_metrics.visual_structure_score > 0.2:
+            scores.append(0.8)
+            
+        avg_score = sum(scores) / len(scores) if scores else 0
+        
+        if avg_score > 0.8:
+            return "excellent_free_verse"
+        elif avg_score > 0.6:
+            return "good_free_verse"
+        elif avg_score > 0.4:
+            return "experimental_free_verse"
+        else:
+            return "irregular_free_verse"
+
+    def analyze_text(self, text: str) -> List[Dict[str, Any]]:
+        """Analyze text containing multiple poems"""
+        poems = self._split_poems(text)
+        logger.info(f"Found {len(poems)} poems to analyze")
+
+        results = []
+        for poem in poems:
+            try:
+                analysis = self.analyze_poem(poem.content)
+
+                results.append({
+                    "poem_id": poem.poem_id,
+                    "title": poem.title,
+                    "content": poem.content,
+                    "analysis": analysis,
+                    "validation": analysis.quality_metrics
+                })
+            except Exception as e:
+                logger.error(f"Error analyzing poem {poem.poem_id}: {e}")
+                continue
+
+        return results
+
+    def analyze_file(self, filepath: str, output_file: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Analyze poems from a file"""
+        try:
+            file_path = Path(filepath)
+            if not file_path.exists():
+                raise FileNotFoundError(f"File not found: {filepath}")
+
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+
+            results = self.analyze_text(text)
+
+            if output_file is None:
+                output_file = f"{file_path.stem}_enhanced_analysis.xlsx"
+
+            self.excel_reporter.create_report(results, output_file)
+
+            logger.info(f"Enhanced analysis complete. Results saved to {output_file}")
+            return results
+
+        except Exception as e:
+            logger.error(f"Error analyzing file {filepath}: {e}")
+            raise
+
+    def _split_poems(self, text: str) -> List[PoemData]:
+        """Split text into individual poems"""
+        text = unicodedata.normalize('NFC', text)
+
+        separators = [
+            r'\*{5,}', r'-{5,}', r'={5,}', r'_{5,}',
+            r'#+\s*\d+\s*#+', r'\n\s*\n\s*\n+'
+        ]
+
+        pattern = '|'.join(separators)
+        blocks = re.split(pattern, text)
+
+        poems = []
+        for i, block in enumerate(blocks, 1):
+            block = block.strip()
+            if len(block) < self.config.min_poem_length:
+                continue
+
+            lines = block.split('\n')
+            if lines:
+                first_line = lines[0].strip()
+                if (self.config.min_title_length <= len(first_line) <= self.config.max_title_length
+                        and not first_line.endswith(('.', '!', '?'))):
+                    title = first_line
+                    content = '\n'.join(lines[1:]).strip()
+                else:
+                    title = f"Poem {i}"
+                    content = block
+
+                poems.append(PoemData(
+                    title=title,
+                    content=content,
+                    poem_id=f"poem_{i:03d}"
+                ))
+
+        return poems
+
+
+# =============================================================================
+# CLASSICAL TAJIK POEM ANALYZER (Maintains original functionality)
+# =============================================================================
+
+class TajikPoemAnalyzer:
+    """Main analyzer class coordinating all components (Classical analysis only)"""
+
+    def __init__(self, config: Optional[AnalysisConfig] = None):
+        self.config = config or AnalysisConfig()
+        self.structural_analyzer = StructuralAnalyzer(self.config)
+        self.content_analyzer = ContentAnalyzer(self.config)
+        self.excel_reporter = ExcelReporter()
+
+        logger.info("TajikPoemAnalyzer initialized (Classical mode)")
+
+    def analyze_poem(self, poem_content: str) -> ComprehensiveAnalysis:
+        """Perform comprehensive analysis of a single poem (Classical)"""
+        if not poem_content or len(poem_content.strip()) < self.config.min_poem_length:
+            raise ValueError("Poem content is too short or empty")
+
+        structural = self.structural_analyzer.analyze(poem_content)
+        content = self.content_analyzer.analyze(poem_content)
+        literary = LiteraryAssessor.assess(structural, content)
+
+        analysis = ComprehensiveAnalysis(
+            structural=structural,
+            content=content,
+            literary=literary,
+            quality_metrics={}
+        )
+
+        validation = QualityValidator.validate_analysis(analysis)
+        analysis.quality_metrics = validation
+
+        return analysis
+
+    def analyze_text(self, text: str) -> List[Dict[str, Any]]:
+        """Analyze text containing multiple poems"""
+        poems = self._split_poems(text)
+        logger.info(f"Found {len(poems)} poems to analyze")
+
+        results = []
+        for poem in poems:
+            try:
+                analysis = self.analyze_poem(poem.content)
+                validation = QualityValidator.validate_analysis(analysis)
+
+                results.append({
+                    "poem_id": poem.poem_id,
+                    "title": poem.title,
+                    "content": poem.content,
+                    "analysis": analysis,
+                    "validation": validation
+                })
+            except Exception as e:
+                logger.error(f"Error analyzing poem {poem.poem_id}: {e}")
+                continue
+
+        return results
+
+    def analyze_file(self, filepath: str, output_file: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Analyze poems from a file"""
+        try:
+            file_path = Path(filepath)
+            if not file_path.exists():
+                raise FileNotFoundError(f"File not found: {filepath}")
+
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+
+            results = self.analyze_text(text)
+
+            if output_file is None:
+                output_file = f"{file_path.stem}_classical_analysis.xlsx"
+
+            self.excel_reporter.create_report(results, output_file)
+
+            logger.info(f"Classical analysis complete. Results saved to {output_file}")
+            return results
+
+        except Exception as e:
+            logger.error(f"Error analyzing file {filepath}: {e}")
+            raise
+
+    def _split_poems(self, text: str) -> List[PoemData]:
+        """Split text into individual poems"""
+        text = unicodedata.normalize('NFC', text)
+
+        separators = [
+            r'\*{5,}', r'-{5,}', r'={5,}', r'_{5,}',
+            r'#+\s*\d+\s*#+', r'\n\s*\n\s*\n+'
+        ]
+
+        pattern = '|'.join(separators)
+        blocks = re.split(pattern, text)
+
+        poems = []
+        for i, block in enumerate(blocks, 1):
+            block = block.strip()
+            if len(block) < self.config.min_poem_length:
+                continue
+
+            lines = block.split('\n')
+            if lines:
+                first_line = lines[0].strip()
+                if (self.config.min_title_length <= len(first_line) <= self.config.max_title_length
+                        and not first_line.endswith(('.', '!', '?'))):
+                    title = first_line
+                    content = '\n'.join(lines[1:]).strip()
+                else:
+                    title = f"Poem {i}"
+                    content = block
+
+                poems.append(PoemData(
+                    title=title,
+                    content=content,
+                    poem_id=f"poem_{i:03d}"
+                ))
+
+        return poems
+
+
+# =============================================================================
 # POEM SPLITTER
 # =============================================================================
 
@@ -1345,141 +2083,11 @@ class ExcelReporter:
 
 
 # =============================================================================
-# MAIN ANALYZER
-# =============================================================================
-
-class TajikPoemAnalyzer:
-    """Main analyzer class coordinating all components"""
-
-    def __init__(self, config: Optional[AnalysisConfig] = None):
-        self.config = config or AnalysisConfig()
-        self.structural_analyzer = StructuralAnalyzer(self.config)
-        self.content_analyzer = ContentAnalyzer(self.config)
-        self.excel_reporter = ExcelReporter()
-
-        logger.info("TajikPoemAnalyzer initialized")
-
-    def analyze_poem(self, poem_content: str) -> ComprehensiveAnalysis:
-        """Perform comprehensive analysis of a single poem"""
-        if not poem_content or len(poem_content.strip()) < self.config.min_poem_length:
-            raise ValueError("Poem content is too short or empty")
-
-        structural = self.structural_analyzer.analyze(poem_content)
-        content = self.content_analyzer.analyze(poem_content)
-        literary = LiteraryAssessor.assess(structural, content)
-
-        analysis = ComprehensiveAnalysis(
-            structural=structural,
-            content=content,
-            literary=literary,
-            quality_metrics={}
-        )
-
-        validation = QualityValidator.validate_analysis(analysis)
-        analysis.quality_metrics = validation
-
-        return analysis
-    
-    def build_corpus_vocabulary(self, corpus_path: str = 'data/tajik_corpus.txt',
-                                output_path: str = 'data/corpus_vocabulary.json') -> Dict[str, int]:
-        """Build vocabulary from corpus and save it"""
-        vocab = self.content_analyzer.build_vocabulary_from_corpus(corpus_path)
-        if vocab:
-            self.content_analyzer.save_vocabulary(vocab, output_path)
-        return vocab
-
-    def analyze_text(self, text: str) -> List[Dict[str, Any]]:
-        """Analyze text containing multiple poems"""
-        poems = self._split_poems(text)
-        logger.info(f"Found {len(poems)} poems to analyze")
-
-        results = []
-        for poem in poems:
-            try:
-                analysis = self.analyze_poem(poem.content)
-                validation = QualityValidator.validate_analysis(analysis)
-
-                results.append({
-                    "poem_id": poem.poem_id,
-                    "title": poem.title,
-                    "content": poem.content,
-                    "analysis": analysis,
-                    "validation": validation
-                })
-            except Exception as e:
-                logger.error(f"Error analyzing poem {poem.poem_id}: {e}")
-                continue
-
-        return results
-
-    def analyze_file(self, filepath: str, output_file: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Analyze poems from a file"""
-        try:
-            file_path = Path(filepath)
-            if not file_path.exists():
-                raise FileNotFoundError(f"File not found: {filepath}")
-
-            with open(file_path, 'r', encoding='utf-8') as f:
-                text = f.read()
-
-            results = self.analyze_text(text)
-
-            if output_file is None:
-                output_file = f"{file_path.stem}_analysis.xlsx"
-
-            self.excel_reporter.create_report(results, output_file)
-
-            logger.info(f"Analysis complete. Results saved to {output_file}")
-            return results
-
-        except Exception as e:
-            logger.error(f"Error analyzing file {filepath}: {e}")
-            raise
-
-    def _split_poems(self, text: str) -> List[PoemData]:
-        """Split text into individual poems"""
-        text = unicodedata.normalize('NFC', text)
-
-        separators = [
-            r'\*{5,}', r'-{5,}', r'={5,}', r'_{5,}',
-            r'#+\s*\d+\s*#+', r'\n\s*\n\s*\n+'
-        ]
-
-        pattern = '|'.join(separators)
-        blocks = re.split(pattern, text)
-
-        poems = []
-        for i, block in enumerate(blocks, 1):
-            block = block.strip()
-            if len(block) < self.config.min_poem_length:
-                continue
-
-            lines = block.split('\n')
-            if lines:
-                first_line = lines[0].strip()
-                if (self.config.min_title_length <= len(first_line) <= self.config.max_title_length
-                        and not first_line.endswith(('.', '!', '?'))):
-                    title = first_line
-                    content = '\n'.join(lines[1:]).strip()
-                else:
-                    title = f"Poem {i}"
-                    content = block
-
-                poems.append(PoemData(
-                    title=title,
-                    content=content,
-                    poem_id=f"poem_{i:03d}"
-                ))
-
-        return poems
-
-
-# =============================================================================
 # MAIN FUNCTION
 # =============================================================================
 
 def main():
-    """Main function demonstrating the analyzer"""
+    """Main function demonstrating both analyzers"""
     sample_text = """
 Дар кӯҳсори ватан гулҳо мешукуфанд,
 Дили ошиқ аз муҳаббат меларзад.
@@ -1495,20 +2103,38 @@ def main():
 """
 
     try:
-        analyzer = TajikPoemAnalyzer()
-        results = analyzer.analyze_text(sample_text)
-
-        print("=== TAJIK POETRY ANALYZER ===\n")
-        print(f"Analyzed {len(results)} poems successfully\n")
-
-        for result in results:
+        print("=== TAJIK POETRY ANALYZER DEMONSTRATION ===\n")
+        
+        # Test Classical Analyzer
+        print("1. CLASSICAL ANALYSIS MODE:")
+        classical_analyzer = TajikPoemAnalyzer()
+        classical_results = classical_analyzer.analyze_text(sample_text)
+        
+        for result in classical_results:
             analysis = result["analysis"]
-            print(f"--- {result['title']} ---")
+            print(f"--- {result['title']} (Classical) ---")
             print(f"  Lines: {analysis.structural.lines}")
             print(f"  Meter: {analysis.structural.aruz_analysis.identified_meter}")
             print(f"  Confidence: {analysis.structural.meter_confidence.value}")
             print(f"  Rhyme Pattern: {analysis.structural.rhyme_pattern}")
             print(f"  Stanza Form: {analysis.structural.stanza_structure}")
+            print(f"  Quality Score: {result['validation']['quality_score']}")
+            print()
+        
+        # Test Enhanced Analyzer
+        print("\n2. ENHANCED ANALYSIS MODE (with free verse detection):")
+        enhanced_analyzer = EnhancedTajikPoemAnalyzer()
+        enhanced_results = enhanced_analyzer.analyze_text(sample_text)
+        
+        for result in enhanced_results:
+            analysis = result["analysis"]
+            print(f"--- {result['title']} (Enhanced) ---")
+            print(f"  Lines: {analysis.structural.lines}")
+            print(f"  Meter: {analysis.structural.aruz_analysis.identified_meter}")
+            print(f"  Free Verse: {analysis.structural.is_free_verse}")
+            if analysis.structural.is_free_verse:
+                print(f"  Free Verse Confidence: {analysis.structural.free_verse_confidence:.0%}")
+                print(f"  Enjambement Ratio: {analysis.structural.modern_metrics.enjambement_ratio:.1%}")
             print(f"  Quality Score: {result['validation']['quality_score']}")
             print()
 
