@@ -34,12 +34,22 @@ try:
         EnhancedPoemSplitter,
         QualityValidator,
         ExcelReporter
+        EnhancedTajikPoemAnalyzer,  
+        ModernVerseAnalyzer,        
+        EnhancedStructuralAnalysis, 
     )
     ANALYZER_AVAILABLE = True
     logger.info("Analyzer loaded successfully")
 except ImportError as e:
     logger.error(f"Analyzer not available: {e}")
     ANALYZER_AVAILABLE = False
+
+try:
+    from corpus_manager import TajikCorpusManager
+    CORPUS_MANAGER_AVAILABLE = True
+except ImportError:
+    logger.warning("Corpus manager not available")
+    CORPUS_MANAGER_AVAILABLE = False
 
 try:
     from pdf_handler import read_file_with_pdf_support
