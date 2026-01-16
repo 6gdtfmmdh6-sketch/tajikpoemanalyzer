@@ -1,200 +1,181 @@
 # Tajik Poetry Analyzer
- 
-Scientific tool for analyzing Tajik/Persian poetry with Aruz metric analysis, phonetic transcription, and PDF/OCR support.
- 
-![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
- 
+
+A scientific-grade tool for analyzing Tajik and Persian poetry using classical ʿArūḍ (عروض) prosody with 16 classical Arabic-Persian meters.
+
 ## Features
- 
-### Core Features
-- **Scientific Aruz Metric Analysis** - 8 classical meters (Hazaj, Ramal, Mutaqarib, Rajaz, Kamil, Tawil, Basit, Wafir)
-- **Phonetic Transcription** - Persian/Tajik phoneme mapping
-- **Rhyme Scheme Detection** - Qafiyeh/Radif analysis
-- **Structural Analysis** - Lines, syllables, stanza forms
-- **Content Analysis** - Words, themes, neologisms, archaisms
-- **Lexicon-based Analysis** - 1.4MB Tajik lexicon
-- **Corpus Validation** - 404MB Tajik corpus (via Git LFS)
- 
-### PDF/OCR Features
-- **PDF Text Extraction** - Normal PDFs with PyPDF2
-- **OCR for Scanned PDFs** - Tesseract with Farsi/Tajik/Russian
-- **Web UI** - Streamlit browser interface for PDF upload
-- **Automatic Encoding Detection**
-- **Bidirectional Text Support** - Arabic/Persian
- 
+
+- **16 Classical ʿArūḍ Meters**: ṭawīl, basīṭ, wāfir, kāmil, mutaqārib, hazaj, rajaz, ramal, sarīʿ, munsarih, khafīf, muḍāriʿ, muqtaḍab, mujtath, mutadārik, madīd
+- **Qāfiyeh/Radīf Detection**: Advanced phonetic-based rhyme analysis
+- **Neologism Detection**: Identifies words not in the 68,000+ word lexicon
+- **Thematic Analysis**: Love, Nature, Homeland, Religion, Mysticism, Philosophy
+- **Lexical Diversity**: Type-Token Ratio calculation
+- **Stylistic Register**: Classical, Neo-classical, Contemporary, Modern
+- **Excel Reports**: Comprehensive analysis export
+
+## ⚠️ Important: Text Input Requirements
+
+### The Problem with PDFs
+
+**Automatic PDF recognition for Tajik Cyrillic text is currently unreliable.** This is due to:
+
+1. **OCR limitations**: Tajik-specific characters (ӣ, ӯ, ҷ, ҳ, қ, ғ) are frequently misrecognized
+2. **Layout issues**: Poetry formatting (line breaks, stanzas) is often destroyed
+3. **Mixed scripts**: Some PDFs contain Arabic script mixed with Cyrillic, causing confusion
+4. **Quality variance**: Scanned PDFs produce especially poor results
+
+### Recommended Workflow
+
+#### Option 1: Manual Transcription (Most Reliable)
+```
+1. Open your PDF
+2. Manually copy/transcribe poems into a .txt file
+3. Use ***** as separator between poems
+4. Run the analyzer on the .txt file
+```
+
+#### Option 2: AI-Assisted Transcription (Recommended)
+```
+1. Upload your PDF to an AI assistant (Claude, ChatGPT, etc.)
+2. Ask: "Please transcribe these Tajik poems into clean text, 
+   preserving line breaks. Use ***** as separator between poems."
+3. Review and correct any errors
+4. Save as .txt file
+5. Run the analyzer
+```
+
+#### Option 3: Clean Digital Text
+If you have access to clean digital text (not scanned):
+```
+1. Copy text directly from the source
+2. Format with ***** separators between poems
+3. Run the analyzer
+```
+
+### Text Format Example
+
+```
+ТӮФОНҲОИ СОКИТ
+
+Дар ин хароси чодуйй
+чизе бигӯ
+бо ин гумкардаҳои хеш
+—Куҷост нишони кӯдакӣ?
+—Дар хотираҳои занҷирӣ,
+Дар ёди сафедорҳои ғамгини кӯчаҳои
+фаромӯшӣ
+
+*****
+
+ҲАҶМИ БОРОНИ
+
+Ман истодаам
+дар имтидоди ғамгини зиндагӣ,
+дар ҳаҷми боронии лаҳзаҳо
+
+*****
+
+ЭЙ ПИНҲОН!
+
+Бозрасид
+он зани муноди рӯъёҳои ман.
+```
+
 ## Installation
- 
-### 1. Clone Repository
+
 ```bash
 git clone https://github.com/6gdtfmmdh6-sketch/tajikpoemanalyzer.git
 cd tajikpoemanalyzer
-```
- 
-### 2. Install Git LFS (for corpus file)
-```bash
-# macOS
-brew install git-lfs
- 
-# Ubuntu/Debian
-sudo apt-get install git-lfs
- 
-# Initialize Git LFS
-git lfs install
-git lfs pull
-```
- 
-### 3. Python Dependencies
-```bash
 pip install -r requirements.txt
 ```
- 
-### 4. System Dependencies for OCR (Optional)
-```bash
-# macOS
-brew install poppler tesseract tesseract-lang
- 
-# Ubuntu/Debian
-sudo apt-get install poppler-utils tesseract-ocr tesseract-ocr-fas tesseract-ocr-rus
-```
- 
+
 ## Usage
- 
-### Web UI (Recommended)
+
+### Web Interface (Recommended)
 ```bash
 streamlit run ui.py
 ```
- 
-Then in browser:
-1. Upload PDF
-2. Click "Start Analysis"
-3. View results
- 
-### Command Line
+
+### Python API
 ```python
-from app2 import TajikPoemAnalyzer, AnalysisConfig
-from pdf_handler import read_file_with_pdf_support
- 
-# Read PDF
-text = read_file_with_pdf_support('poems.pdf')
- 
-# Initialize analyzer
+from analyzer import TajikPoemAnalyzer, AnalysisConfig
+
 config = AnalysisConfig(lexicon_path='data/tajik_lexicon.json')
-analyzer = TajikPoemAnalyzer(config=config)
- 
-# Analyze
-for poem_text in text.split('\n\n'):
-    if len(poem_text) > 20:
-        analysis = analyzer.analyze_poem(poem_text)
-        print(f"Aruz Meter: {analysis.structural.aruz_analysis.identified_meter}")
-        print(f"Rhyme Scheme: {analysis.structural.rhyme_pattern}")
+analyzer = TajikPoemAnalyzer(config)
+
+poem = """
+Дар кӯҳсори ватан гулҳо мешукуфанд,
+Дили ошиқ аз муҳаббат меларзад.
+"""
+
+result = analyzer.analyze_poem(poem)
+
+print(f"Meter: {result.structural.aruz_analysis.identified_meter}")
+print(f"Rhyme Pattern: {result.structural.rhyme_pattern}")
+print(f"Neologisms: {result.content.neologisms}")
+print(f"Themes: {result.content.theme_distribution}")
 ```
- 
-### Run Example
-```bash
-python3 example_usage.py
+
+### Batch Analysis
+```python
+# Analyze multiple poems from a file
+results = analyzer.analyze_file('data/poems.txt', 'output/analysis.xlsx')
 ```
- 
-## Project Structure
- 
-```
-tajikpoemanalyzer/
-├── ui.py                      # Streamlit Web UI
-├── app2.py                    # Main analyzer (85KB)
-├── pdf_handler.py             # PDF/OCR integration
-├── ocr_processor.py           # OCR engine
-├── phonetic_utils.py          # Phonetic utilities
-├── data/
-│   ├── tajik_lexicon.json     # 1.4MB lexicon
-│   ├── tajik_corpus.txt       # 404MB corpus (Git LFS)
-│   └── poems.txt              # Examples
-├── tests/
-│   └── test_validation_suite.py
-└── requirements.txt
-```
- 
-## Analysis Results
- 
-The analyzer provides:
-- **Structural**: Lines, syllables, stanzas, Aruz meter, rhyme scheme
-- **Content**: Words, themes, neologisms, archaisms
-- **Quality**: Literary evaluation
-- **Theoretical**: Translation theory (Ette/Bachmann-Medick), Semiotics (Lotman)
- 
-## Tests
- 
-```bash
-# Workflow test
-python3 test_complete_workflow.py
- 
-# All tests
-pytest tests/
-```
- 
+
 ## Data Files
- 
-### Lexicon (1.4 MB)
-- **Purpose**: Dictionary for word analysis
-- **Content**: Tajik words
-- **Status**: Included in Git
- 
-### Corpus (404 MB)
-- **Purpose**: Statistical analysis
-- **Content**: Tajik text corpus
-- **Status**: Via Git LFS (available after `git lfs pull`)
- 
-## Technical Details
- 
-### Aruz Metrics
-The system implements classical Persian prosody:
-- Hazaj, Ramal, Mutaqarib, Rajaz, Kamil, Tawil, Basit, Wafir
-- Syllable weight calculation (heavy/light)
-- Pattern matching with confidence scores
- 
-### OCR
-- Tesseract with Farsi/Tajik/Russian support
-- Automatic detection of scanned PDFs
-- Async processing for performance
- 
-## Collaboration
- 
-For collaborators:
- 
-```bash
-# Clone repository
-git clone https://github.com/6gdtfmmdh6-sketch/tajikpoemanalyzer.git
-cd tajikpoemanalyzer
- 
-# Install Git LFS and download corpus
-brew install git-lfs  # or apt-get install git-lfs
-git lfs install
-git lfs pull
- 
-# Install dependencies
-pip install -r requirements.txt
- 
-# Start UI
-streamlit run ui.py
-```
- 
-## Documentation
- 
-- [HOW_TO_RUN.md](HOW_TO_RUN.md) - Detailed instructions
-- [DATA_README.md](DATA_README.md) - Information about data files
- 
+
+| File | Size | Description |
+|------|------|-------------|
+| `tajik_lexicon.json` | 1.4 MB | 68,060 Tajik words for neologism detection |
+| `tajik_corpus.txt` | 404 MB | Large corpus for vocabulary building |
+| `shahnama.txt` | 154 KB | Shahnameh excerpts for testing |
+
+## Analysis Output
+
+### Structural Analysis
+- Line count, syllable patterns
+- ʿArūḍ meter identification with confidence level
+- Rhyme scheme (AABB, ABAB, etc.)
+- Stanza form (ghazal, rubaiyat, qasida, free verse)
+
+### Content Analysis
+- Word frequencies
+- Neologisms (words not in lexicon)
+- Archaisms (classical vocabulary)
+- Thematic distribution
+- Lexical diversity score
+- Stylistic register
+
+### Quality Metrics
+- Analysis confidence score
+- Reliability assessment
+- Warnings and recommendations
+
+## Technical Notes
+
+### Supported Characters
+The analyzer fully supports Tajik Cyrillic including:
+- Standard Cyrillic: А-Я, а-я
+- Tajik-specific: Ӣ ӣ, Ӯ ӯ, Ҷ ҷ, Ҳ ҳ, Қ қ, Ғ ғ
+
+### Meter Detection Accuracy
+- **High confidence (>90%)**: Clear classical meters
+- **Medium confidence (70-90%)**: Some variation from standard patterns
+- **Low confidence (50-70%)**: Possible free verse or mixed meters
+- **None (<50%)**: Unable to identify meter reliably
+
+## Contributing
+
+Contributions welcome! Areas of interest:
+- Improved OCR pipeline for Tajik text
+- Additional meter patterns and variations
+- Expanded lexicon coverage
+- Better archaism detection
+
 ## License
- 
+
 MIT License
- 
-## Credits
- 
-- Original Analyzer: Scientific implementation with authentic Aruz analysis
-- PDF/OCR Integration: Extended functionality for digital corpora
-- Corpus: Tajik text collection (404MB)
- 
-## Support
- 
-For issues:
-1. See [HOW_TO_RUN.md](HOW_TO_RUN.md) for troubleshooting
-2. Test with `python3 test_complete_workflow.py`
-3. Create an issue on GitHub
+
+## Acknowledgments
+
+- Classical ʿArūḍ theory based on al-Khalīl ibn Aḥmad's system
+- Tajik lexicon derived from contemporary Tajik corpus data
