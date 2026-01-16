@@ -135,6 +135,17 @@ class RhymeAnalysis:
 
 
 @dataclass
+class RadifAnalysis:
+    """Results of Radīf (refrain) detection"""
+    radif_present: bool
+    radif_text: str
+    radif_frequency: float  # Percentage of lines with radīf
+    lines_without_radif: List[str] = field(default_factory=list)
+    original_lines: List[str] = field(default_factory=list)
+    meter_corrected: Optional[Dict[str, Any]] = None
+
+
+@dataclass
 class AruzAnalysis:
     """Results of ʿArūḍ meter analysis"""
     identified_meter: str
@@ -932,6 +943,144 @@ class FreeVerseClassifier:
 
 
 # =============================================================================
+# ENHANCED RADĪF DETECTOR
+# =============================================================================
+
+class EnhancedRadifDetector:
+    """
+    Enhanced Radīf (refrain) detector with metric correction.
+    
+    Radīf is the repeated word(s) at the end of lines in classical Persian/Tajik poetry.
+    This class detects radīf patterns and provides corrected lines for meter analysis.
+    
+    Example: In P031 ("ВАҚТ"), each line ends with "вақт" (time/moment).
+    """
+    
+    def __init__(self):
+        self.min_radif_frequency = 0.3  # At least 30% of lines must have radīf
+        self.phonetics = PersianTajikPhonetics()
+        self.logger = logging.getLogger(f"{__name__}.EnhancedRadifDetector")
+    
+    def detect_radif_pattern(self, poem_content: str) -> RadifAnalysis:
+        """Detect Radīf pattern and prepare corrected lines for meter analysis."""
+        lines = [line.strip() for line in poem_content.split('\n') if line.strip()]
+        
+        if len(lines) < 2:
+            return self._empty_radif_analysis(lines)
+        
+        # 1. Find common endings (Radīf candidates)
+        radif_candidates = self._find_common_endings(lines)
+        
+        # 2. Select best Radīf
+        best_radif = self._select_best_radif(radif_candidates, lines)
+        
+        # 3. Remove Radīf and analyze meter
+        if best_radif:
+            lines_without_radif = self._remove_radif(lines, best_radif)
+            radif_frequency = self._calculate_radif_frequency(lines, best_radif)
+            
+            self.logger.info(f"Detected Radīf: '{best_radif}' in {radif_frequency:.0%} of lines")
+            
+            return RadifAnalysis(
+                radif_present=True,
+                radif_text=best_radif,
+                radif_frequency=radif_frequency,
+                lines_without_radif=lines_without_radif,
+                original_lines=lines,
+                meter_corrected=None  # Will be filled by StructuralAnalyzer
+            )
+        
+        return self._empty_radif_analysis(lines)
+    
+    def _find_common_endings(self, lines: List[str]) -> Dict[str, int]:
+        """Find frequent endings in the last 1-3 words."""
+        endings = Counter()
+        
+        for line in lines:
+            words = re.findall(r'[\wӣӯ]+', line)
+            if not words:
+                continue
+            
+            # Test different Radīf lengths (1-3 words)
+            for length in range(1, min(4, len(words) + 1)):
+                ending = " ".join(words[-length:])
+                endings[ending] += 1
+        
+        # Filter only significant endings (at least min_radif_frequency of lines)
+        min_count = int(len(lines) * self.min_radif_frequency)
+        significant = {e: c for e, c in endings.items() if c >= min_count}
+        
+        return significant
+    
+    def _select_best_radif(self, candidates: Dict[str, int], lines: List[str]) -> str:
+        """Select the best Radīf from candidates."""
+        if not candidates:
+            return ""
+        
+        # Prefer shorter Radīf with higher frequency
+        # Score = frequency * (1 / word_count)
+        best_radif = ""
+        best_score = 0
+        
+        for radif, count in candidates.items():
+            word_count = len(radif.split())
+            # Prefer single-word Radīf, but allow multi-word if very frequent
+            score = count / len(lines) * (1.5 / word_count)
+            
+            # Bonus for appearing at actual line ends (not just anywhere)
+            line_end_count = sum(1 for line in lines if line.strip().endswith(radif))
+            line_end_bonus = line_end_count / len(lines)
+            score += line_end_bonus
+            
+            if score > best_score:
+                best_score = score
+                best_radif = radif
+        
+        # Only accept if it appears frequently enough
+        if best_score < 0.4:
+            return ""
+        
+        return best_radif
+    
+    def _remove_radif(self, lines: List[str], radif: str) -> List[str]:
+        """Remove Radīf from lines for correct meter analysis."""
+        cleaned_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            
+            # Check if line ends with Radīf
+            if line.endswith(radif):
+                # Remove Radīf and trailing punctuation/whitespace
+                cleaned = line[:-len(radif)].rstrip(' ,;:!?.—–-')
+                cleaned_lines.append(cleaned.strip())
+            else:
+                # Keep original if Radīf not found
+                cleaned_lines.append(line)
+        
+        return cleaned_lines
+    
+    def _calculate_radif_frequency(self, lines: List[str], radif: str) -> float:
+        """Calculate frequency of Radīf appearance."""
+        if not lines or not radif:
+            return 0.0
+        
+        count = sum(1 for line in lines if line.strip().endswith(radif))
+        return count / len(lines)
+    
+    def _empty_radif_analysis(self, lines: List[str]) -> RadifAnalysis:
+        """Return empty Radīf analysis."""
+        return RadifAnalysis(
+            radif_present=False,
+            radif_text="",
+            radif_frequency=0.0,
+            lines_without_radif=lines,
+            original_lines=lines,
+            meter_corrected=None
+        )
+
+
+# =============================================================================
 # RHYME ANALYZER
 # =============================================================================
 
@@ -1041,45 +1190,74 @@ class AdvancedRhymeAnalyzer:
 # =============================================================================
 
 class StructuralAnalyzer:
-    """Enhanced structural analyzer"""
+    """Enhanced structural analyzer with Radīf detection"""
 
     def __init__(self, config: Optional[AnalysisConfig] = None):
         self.config = config or AnalysisConfig()
         self.aruz_analyzer = AruzMeterAnalyzer(self.config)
         self.rhyme_analyzer = AdvancedRhymeAnalyzer()
         self.phonetics = PersianTajikPhonetics()
+        self.radif_detector = EnhancedRadifDetector()  # NEW: Radīf detection
 
     def analyze(self, poem_content: str) -> StructuralAnalysis:
-        """Comprehensive structural analysis"""
+        """Comprehensive structural analysis with Radīf-aware meter detection"""
         lines = [line.strip() for line in poem_content.split('\n') if line.strip()]
 
         if not lines:
             raise ValueError("No valid lines found in poem")
+
+        # NEW: Detect Radīf pattern first
+        radif_analysis = self.radif_detector.detect_radif_pattern(poem_content)
+        has_radif = radif_analysis.radif_present
+        radif_text = radif_analysis.radif_text
+        
+        # Use cleaned lines for meter analysis if Radīf is present
+        analysis_lines = radif_analysis.lines_without_radif if has_radif else lines
+        
+        if has_radif:
+            logger.info(f"Radīf detected: '{radif_text}' - using cleaned lines for meter analysis")
 
         line_analyses = []
         syllable_counts = []
         syllable_patterns = []
         rhyme_analyses = []
 
-        for line in lines:
-            phonetic = self.phonetics.analyze_phonetics(line)
-            syllables = self.aruz_analyzer._extract_prosodic_syllables(line, phonetic)
+        # Analyze with original lines for rhyme, cleaned lines for meter
+        for i, original_line in enumerate(lines):
+            # Use cleaned line for meter analysis
+            meter_line = analysis_lines[i] if i < len(analysis_lines) else original_line
+            
+            phonetic = self.phonetics.analyze_phonetics(meter_line)
+            syllables = self.aruz_analyzer._extract_prosodic_syllables(meter_line, phonetic)
             syllable_patterns.append(syllables)
             syllable_counts.append(len(syllables))
 
-            rhyme = self.rhyme_analyzer.analyze_rhyme(line)
+            # Use original line for rhyme analysis
+            rhyme = self.rhyme_analyzer.analyze_rhyme(original_line)
+            # Update radif field if global Radīf detected
+            if has_radif and not rhyme.radif:
+                rhyme = RhymeAnalysis(
+                    qafiyeh=rhyme.qafiyeh,
+                    radif=radif_text,
+                    phonetic_rhyme=rhyme.phonetic_rhyme,
+                    rhyme_type=rhyme.rhyme_type,
+                    rhyme_position=rhyme.rhyme_position,
+                    confidence=rhyme.confidence
+                )
             rhyme_analyses.append(rhyme)
 
-            aruz = self.aruz_analyzer.analyze_meter(line)
+            aruz = self.aruz_analyzer.analyze_meter(meter_line)
 
             line_analyses.append({
                 'syllables': syllables,
                 'rhyme': rhyme,
-                'aruz': aruz
+                'aruz': aruz,
+                'has_radif': has_radif,
+                'radif_text': radif_text if has_radif else ''
             })
 
-        rhyme_pattern = self._generate_rhyme_pattern(rhyme_analyses)
-        stanza_structure = self._detect_stanza_structure(lines, rhyme_pattern)
+        rhyme_pattern = self._generate_rhyme_pattern(rhyme_analyses, radif_text if has_radif else '')
+        stanza_structure = self._detect_stanza_structure(lines, rhyme_pattern, has_radif)
         avg_syllables = sum(syllable_counts) / len(syllable_counts) if syllable_counts else 0
         prosodic_consistency = self._calculate_prosodic_consistency(line_analyses)
 
@@ -1099,8 +1277,8 @@ class StructuralAnalyzer:
             meter_confidence=overall_aruz.confidence
         )
 
-    def _generate_rhyme_pattern(self, rhyme_analyses: List[RhymeAnalysis]) -> str:
-        """Generate rhyme scheme pattern"""
+    def _generate_rhyme_pattern(self, rhyme_analyses: List[RhymeAnalysis], global_radif: str = '') -> str:
+        """Generate rhyme scheme pattern with Radīf awareness"""
         if not rhyme_analyses:
             return ""
 
@@ -1109,7 +1287,11 @@ class StructuralAnalyzer:
         next_label = 'A'
 
         for rhyme in rhyme_analyses:
-            rhyme_key = (rhyme.qafiyeh, rhyme.radif, rhyme.phonetic_rhyme)
+            # For poems with global Radīf, focus on Qāfiyeh similarity
+            if global_radif:
+                rhyme_key = (rhyme.qafiyeh, global_radif, rhyme.phonetic_rhyme)
+            else:
+                rhyme_key = (rhyme.qafiyeh, rhyme.radif, rhyme.phonetic_rhyme)
             matched = False
 
             for prev_key, label in rhyme_groups.items():
@@ -1122,7 +1304,9 @@ class StructuralAnalyzer:
                     confidence=0.0
                 )
                 similarity = self.rhyme_analyzer.calculate_rhyme_similarity(rhyme, prev_rhyme)
-                if similarity > 0.7:
+                # Higher threshold for Radīf poems (they often rhyme consistently)
+                threshold = 0.6 if global_radif else 0.7
+                if similarity > threshold:
                     pattern.append(label)
                     matched = True
                     break
@@ -1134,10 +1318,19 @@ class StructuralAnalyzer:
 
         return ''.join(pattern)
 
-    def _detect_stanza_structure(self, lines: List[str], rhyme_pattern: str) -> str:
-        """Detect stanza structure"""
+    def _detect_stanza_structure(self, lines: List[str], rhyme_pattern: str, has_radif: bool = False) -> str:
+        """Detect stanza structure with Radīf awareness"""
         if len(lines) <= 2:
             return "monostich" if len(lines) == 1 else "couplet"
+
+        # Poems with Radīf are often ghazals or qasidas
+        if has_radif:
+            if len(lines) >= 10:
+                return "qasida_with_radif"
+            elif len(lines) >= 5:
+                return "ghazal_with_radif"
+            else:
+                return "qita_with_radif"  # Short poem with refrain
 
         if rhyme_pattern.startswith('AA') and all(c in ['A', 'B'] for c in rhyme_pattern):
             return "ghazal"
@@ -1972,13 +2165,14 @@ class ExcelReporter:
             raise
 
     def _create_overview_sheet(self, wb: openpyxl.Workbook, results: List[Dict[str, Any]]):
-        """Create overview sheet"""
+        """Create overview sheet with Radīf information"""
         ws = wb.active
         ws.title = "Overview"
 
+        # NEW: Added "Radīf" column
         headers = [
             "ID", "Title", "Lines", "Meter", "Confidence", "Rhyme Pattern",
-            "Stanza Form", "Avg Syllables", "Quality Score"
+            "Stanza Form", "Radīf", "Avg Syllables", "Quality Score"
         ]
 
         for col_num, header in enumerate(headers, 1):
@@ -1990,6 +2184,11 @@ class ExcelReporter:
         for row_num, result in enumerate(results, 2):
             analysis = result["analysis"]
             validation = result.get("validation", {})
+            
+            # Detect global Radīf
+            structural = analysis.structural
+            radif_values = [r.radif for r in structural.rhyme_scheme if r.radif]
+            global_radif = radif_values[0] if radif_values and len(set(radif_values)) == 1 else "—"
 
             values = [
                 result["poem_id"],
@@ -1999,6 +2198,7 @@ class ExcelReporter:
                 analysis.structural.meter_confidence.value,
                 analysis.structural.rhyme_pattern,
                 analysis.structural.stanza_structure,
+                global_radif,
                 analysis.structural.avg_syllables,
                 validation.get("quality_score", "N/A")
             ]
@@ -2008,12 +2208,13 @@ class ExcelReporter:
                 cell.border = self.border
 
     def _create_structural_sheet(self, wb: openpyxl.Workbook, results: List[Dict[str, Any]]):
-        """Create structural analysis sheet"""
+        """Create structural analysis sheet with Radīf detection"""
         ws = wb.create_sheet(title="Structural Analysis")
 
+        # NEW: Added "Global Radīf" and "Radīf Frequency" columns
         headers = [
             "Poem ID", "Line #", "Line Text", "Syllables", "Meter Pattern",
-            "Qāfiyeh", "Radīf", "Rhyme Type"
+            "Qāfiyeh", "Radīf", "Rhyme Type", "Global Radīf", "Stanza Form"
         ]
 
         for col_num, header in enumerate(headers, 1):
@@ -2026,6 +2227,12 @@ class ExcelReporter:
             poem_id = result["poem_id"]
             content = result["content"]
             structural = result["analysis"].structural
+            
+            # Detect if poem has global Radīf
+            # Check if all rhyme_scheme entries have same radif
+            radif_values = [r.radif for r in structural.rhyme_scheme if r.radif]
+            global_radif = radif_values[0] if radif_values and len(set(radif_values)) == 1 else ""
+            stanza_form = structural.stanza_structure
 
             lines = [line.strip() for line in content.split('\n') if line.strip()]
 
@@ -2048,7 +2255,7 @@ class ExcelReporter:
 
                 values = [
                     poem_id, line_idx + 1, line, syllable_count, pattern,
-                    qafiyeh, radif, rhyme_type
+                    qafiyeh, radif, rhyme_type, global_radif, stanza_form
                 ]
 
                 for col_num, value in enumerate(values, 1):
