@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-Simple Web-UI for Tajik Poetry Analyzer
-Supports PDF upload and analysis with ʿArūḍ Analysis (16 classical meters)
+Enhanced Web-UI for Tajik Poetry Analyzer
+Supports both classical and enhanced analysis with free verse detection
 
-Uses consolidated analyzer.py with:
-- 16 Classical ʿArūḍ meters
-- Qāfiyeh/Radīf detection
-- Prosodic weight calculation
-- Scientific quality validation
+Features:
+1. Classical ʿArūḍ analysis (16 meters)
+2. Enhanced analysis with free verse detection
+3. Modern verse metrics
+4. PDF and OCR support
+5. Scientific quality validation
 """
+
 import streamlit as st
 from pathlib import Path
 import tempfile
@@ -25,31 +27,25 @@ logger = logging.getLogger(__name__)
 try:
     from analyzer import (
         TajikPoemAnalyzer,
+        EnhancedTajikPoemAnalyzer,
         AnalysisConfig,
         PoemData,
         AruzMeterAnalyzer,
         AdvancedRhymeAnalyzer,
         MeterConfidence,
         StructuralAnalysis,
+        EnhancedStructuralAnalysis,
+        EnhancedComprehensiveAnalysis,
+        ModernVerseMetrics,
         EnhancedPoemSplitter,
         QualityValidator,
         ExcelReporter
-        EnhancedTajikPoemAnalyzer,  
-        ModernVerseAnalyzer,        
-        EnhancedStructuralAnalysis, 
     )
     ANALYZER_AVAILABLE = True
     logger.info("Analyzer loaded successfully")
 except ImportError as e:
     logger.error(f"Analyzer not available: {e}")
     ANALYZER_AVAILABLE = False
-
-try:
-    from corpus_manager import TajikCorpusManager
-    CORPUS_MANAGER_AVAILABLE = True
-except ImportError:
-    logger.warning("Corpus manager not available")
-    CORPUS_MANAGER_AVAILABLE = False
 
 try:
     from pdf_handler import read_file_with_pdf_support
@@ -72,6 +68,20 @@ st.markdown("""
     .stButton>button {width: 100%;}
     .analyzer-badge {
         background-color: #28a745;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.8em;
+    }
+    .free-verse-badge {
+        background-color: #ff6b6b;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.8em;
+    }
+    .classical-badge {
+        background-color: #4a6fa5;
         color: white;
         padding: 2px 8px;
         border-radius: 10px;
@@ -155,10 +165,17 @@ class UIPoemSplitter:
 # Helper Functions
 # -------------------------------------------------------------------
 @st.cache_resource
-def load_analyzer():
-    """Initialize analyzer (cached)"""
+def load_classical_analyzer():
+    """Initialize classical analyzer (cached)"""
     config = AnalysisConfig(lexicon_path='data/tajik_lexicon.json')
     return TajikPoemAnalyzer(config=config)
+
+
+@st.cache_resource
+def load_enhanced_analyzer():
+    """Initialize enhanced analyzer (cached)"""
+    config = AnalysisConfig(lexicon_path='data/tajik_lexicon.json')
+    return EnhancedTajikPoemAnalyzer(config=config, enable_corpus=False)
 
 
 def split_poems_auto(text: str) -> list:
@@ -192,13 +209,13 @@ def split_text_at_indices(text: str, split_indices: List[int]) -> List[str]:
     return poems
 
 
-def display_results(analysis, poem_num: int, poem_text: str):
-    """Display analysis results"""
+def display_classical_results(analysis, poem_num: int, poem_text: str):
+    """Display classical analysis results"""
     structural = analysis.structural
     content = analysis.content
     validation = analysis.quality_metrics
     
-    with st.expander(f"📜 Poem {poem_num} - {content.total_words} words", expanded=True):
+    with st.expander(f"Poem {poem_num} - Classical Analysis - {content.total_words} words", expanded=True):
         # Content
         st.subheader("Content")
         st.text(poem_text[:500] + "..." if len(poem_text) > 500 else poem_text)
@@ -206,7 +223,7 @@ def display_results(analysis, poem_num: int, poem_text: str):
         st.markdown("---")
         
         # ʿArūḍ Meter Analysis
-        st.subheader("🎯 ʿArūḍ Meter Analysis")
+        st.subheader("ʿArūḍ Meter Analysis")
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -216,9 +233,9 @@ def display_results(analysis, poem_num: int, poem_text: str):
         with col2:
             confidence = structural.meter_confidence.value
             confidence_color = {
-                'high': '🟢', 'medium': '🟡', 'low': '🟠', 'none': '🔴'
-            }.get(confidence, '⚪')
-            st.metric("Confidence", f"{confidence_color} {confidence.title()}")
+                'high': 'green', 'medium': 'orange', 'low': 'red', 'none': 'gray'
+            }.get(confidence, 'gray')
+            st.metric("Confidence", f"{confidence.title()}")
         
         with col3:
             prosodic = structural.prosodic_consistency
@@ -233,12 +250,12 @@ def display_results(analysis, poem_num: int, poem_text: str):
         st.markdown("---")
         
         # Structural Analysis
-        st.subheader("📊 Structural Analysis")
+        st.subheader("Structural Analysis")
         col1, col2 = st.columns(2)
         
         with col1:
             st.write(f"**Lines:** {structural.lines}")
-            st.write(f"**Avg Syllables/Line:** {structural.avg_syllables:.1f}")
+            st.write(f"**Average Syllables per Line:** {structural.avg_syllables:.1f}")
             st.write(f"**Stanza Form:** {structural.stanza_structure}")
         
         with col2:
@@ -246,8 +263,8 @@ def display_results(analysis, poem_num: int, poem_text: str):
         
         st.markdown("---")
         
-        # Content Analysis (NEW!)
-        st.subheader("📚 Content Analysis")
+        # Content Analysis
+        st.subheader("Content Analysis")
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -284,7 +301,7 @@ def display_results(analysis, poem_num: int, poem_text: str):
         st.markdown("---")
         
         # Rhyme Analysis
-        st.subheader("🎵 Rhyme Analysis (Qāfiyeh/Radīf)")
+        st.subheader("Rhyme Analysis (Qāfiyeh/Radīf)")
         
         if structural.rhyme_scheme:
             for i, rhyme in enumerate(structural.rhyme_scheme[:5]):
@@ -304,7 +321,7 @@ def display_results(analysis, poem_num: int, poem_text: str):
         st.markdown("---")
         
         # Quality Validation
-        st.subheader("✅ Quality Validation")
+        st.subheader("Quality Validation")
         
         quality_score = validation.get('quality_score', 0)
         reliability = validation.get('reliability', 'unknown')
@@ -313,20 +330,163 @@ def display_results(analysis, poem_num: int, poem_text: str):
         with col1:
             st.metric("Quality Score", f"{quality_score:.0%}")
         with col2:
-            reliability_color = {'high': '🟢', 'medium': '🟡', 'low': '🟠'}.get(reliability, '⚪')
-            st.metric("Reliability", f"{reliability_color} {reliability.title()}")
+            reliability_color = {'high': 'green', 'medium': 'orange', 'low': 'red'}.get(reliability, 'gray')
+            st.metric("Reliability", reliability.title())
         
         warnings = validation.get('warnings', [])
         if warnings:
             st.warning("**Warnings:**")
             for w in warnings:
-                st.write(f"⚠️ {w}")
+                st.write(f"{w}")
         
         recommendations = validation.get('recommendations', [])
         if recommendations:
             st.info("**Recommendations:**")
             for r in recommendations:
-                st.write(f"💡 {r}")
+                st.write(f"{r}")
+
+
+def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: int, poem_text: str):
+    """Display enhanced analysis results with free verse detection"""
+    structural = analysis.structural
+    content = analysis.content
+    validation = analysis.quality_metrics
+    
+    # Determine badge
+    if structural.is_free_verse:
+        badge = '<span class="free-verse-badge">Free Verse Detected</span>'
+    else:
+        badge = '<span class="classical-badge">Classical Form</span>'
+    
+    with st.expander(f"Poem {poem_num} - Enhanced Analysis - {content.total_words} words {badge}", expanded=True, unsafe_allow_html=True):
+        # Content
+        st.subheader("Content")
+        st.text(poem_text[:500] + "..." if len(poem_text) > 500 else poem_text)
+        
+        st.markdown("---")
+        
+        # Analysis Summary
+        st.subheader("Analysis Summary")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if structural.is_free_verse:
+                st.metric("Form", "Free Verse")
+                st.metric("Free Verse Confidence", f"{structural.free_verse_confidence:.0%}")
+            else:
+                meter_name = structural.aruz_analysis.identified_meter
+                st.metric("Identified Meter", meter_name.title())
+        
+        with col2:
+            confidence = structural.meter_confidence.value
+            st.metric("Confidence", confidence.title())
+            prosodic = structural.prosodic_consistency
+            st.metric("Prosodic Consistency", f"{prosodic:.1%}")
+        
+        with col3:
+            st.metric("Lines", structural.lines)
+            st.metric("Average Syllables", f"{structural.avg_syllables:.1f}")
+        
+        st.markdown("---")
+        
+        # Free Verse Analysis (if applicable)
+        if structural.is_free_verse and structural.modern_metrics:
+            st.subheader("Modern Verse Analysis")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.metric("Enjambement Ratio", f"{structural.modern_metrics.enjambement_ratio:.1%}")
+                st.metric("Line Variation", f"{structural.modern_metrics.line_length_variation:.2f}")
+                st.metric("Prose Tendency", f"{structural.modern_metrics.prose_poetry_score:.1%}")
+            
+            with col2:
+                st.metric("Visual Complexity", f"{structural.modern_metrics.visual_structure_score:.1%}")
+                st.metric("Syntactic Parallelism", f"{structural.modern_metrics.syntactic_parallelism:.1%}")
+                st.metric("Lexical Repetition", f"{structural.modern_metrics.lexical_repetition_score:.1%}")
+            
+            # Free verse assessment
+            if "free_verse_analysis" in validation:
+                fv_assessment = validation["free_verse_analysis"].get("assessment", "")
+                if fv_assessment:
+                    assessment_display = fv_assessment.replace('_', ' ').title()
+                    st.info(f"**Free Verse Assessment:** {assessment_display}")
+            
+            st.markdown("---")
+        
+        # Classical Metrics (always shown)
+        st.subheader("Classical Metrics")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write(f"**Stanza Form:** {structural.stanza_structure}")
+            st.write(f"**Rhyme Pattern:** {structural.rhyme_pattern}")
+            if structural.aruz_analysis.pattern_match:
+                st.write(f"**Meter Pattern:** `{structural.aruz_analysis.pattern_match}`")
+        
+        with col2:
+            st.write(f"**Total Syllables:** {sum(structural.syllables_per_line)}")
+            st.write(f"**Syllables per Line:** {', '.join(map(str, structural.syllables_per_line))}")
+            if structural.aruz_analysis.variations_detected:
+                st.write(f"**Meter Variations:** {', '.join(structural.aruz_analysis.variations_detected)}")
+        
+        st.markdown("---")
+        
+        # Content Analysis
+        st.subheader("Content Analysis")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Words", content.total_words)
+            st.metric("Unique Words", content.unique_words)
+        
+        with col2:
+            st.metric("Lexical Diversity", f"{content.lexical_diversity:.1%}")
+            st.metric("Stylistic Register", content.stylistic_register.title())
+        
+        with col3:
+            st.metric("Neologisms", len(content.neologisms))
+            st.metric("Archaisms", len(content.archaisms))
+        
+        # Word Frequencies
+        if content.word_frequencies:
+            st.write("**Top 10 Words:**")
+            top_words = ", ".join([f"{w}({c})" for w, c in content.word_frequencies[:10]])
+            st.write(top_words)
+        
+        # Themes
+        active_themes = [k for k, v in content.theme_distribution.items() if v > 0]
+        if active_themes:
+            st.write(f"**Themes:** {', '.join(active_themes)}")
+        
+        st.markdown("---")
+        
+        # Quality Validation
+        st.subheader("Quality Validation")
+        
+        quality_score = validation.get('quality_score', 0)
+        reliability = validation.get('reliability', 'unknown')
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Quality Score", f"{quality_score:.0%}")
+        with col2:
+            st.metric("Reliability", reliability.title())
+        
+        warnings = validation.get('warnings', [])
+        if warnings:
+            st.warning("**Warnings:**")
+            for w in warnings:
+                st.write(f"{w}")
+        
+        recommendations = validation.get('recommendations', [])
+        if recommendations:
+            st.info("**Recommendations:**")
+            for r in recommendations:
+                st.write(f"{r}")
 
 
 # -------------------------------------------------------------------
@@ -348,33 +508,55 @@ def main():
         st.session_state.proceed_to_analysis = False
     if 'final_poems' not in st.session_state:
         st.session_state.final_poems = []
+    if 'analysis_mode' not in st.session_state:
+        st.session_state.analysis_mode = "Enhanced"
     
     st.title("Tajik Poetry Analyzer")
-    st.markdown('<span class="analyzer-badge">🚀 ʿArūḍ Analysis with 16 Classical Meters</span>', unsafe_allow_html=True)
+    st.markdown("Advanced scientific analysis of Tajik poetry with classical and modern approaches")
     st.markdown("---")
 
     # Sidebar
     with st.sidebar:
-        st.header("ℹ️ Features")
-        st.write("✅ 16 Classical ʿArūḍ Meters")
-        st.write("✅ Qāfiyeh/Radīf Detection")
-        st.write("✅ Phonetic Transcription")
-        st.write("✅ Prosodic Consistency")
-        st.write("✅ Scientific Validation")
-        st.write("✅ PDF & OCR support")
+        st.header("Analysis Mode")
+        
+        analysis_mode = st.radio(
+            "Select analysis mode:",
+            options=["Classical (ʿArūḍ only)", "Enhanced (with free verse detection)"],
+            index=1,
+            key="analysis_mode_selector"
+        )
+        
+        st.session_state.analysis_mode = analysis_mode
         
         st.markdown("---")
-        st.header("📚 Supported Meters")
+        st.header("Features")
+        
+        if analysis_mode == "Classical (ʿArūḍ only)":
+            st.write("16 Classical ʿArūḍ Meters")
+            st.write("Qāfiyeh/Radīf Detection")
+            st.write("Prosodic Weight Calculation")
+            st.write("Classical Form Recognition")
+            st.write("Scientific Validation")
+        else:
+            st.write("Free Verse Detection")
+            st.write("Modern Verse Metrics")
+            st.write("Enjambement Analysis")
+            st.write("Line Variation Analysis")
+            st.write("Prose-Poetry Assessment")
+            st.write("All Classical Features")
+        
+        st.markdown("---")
+        st.header("Supported Classical Meters")
         meters = ["ṭawīl", "basīṭ", "wāfir", "kāmil", "mutaqārib", "hazaj", 
                   "rajaz", "ramal", "sarīʿ", "munsarih", "khafīf", "muḍāriʿ",
                   "muqtaḍab", "mujtath", "mutadārik", "madīd"]
         st.write(", ".join(meters))
 
     # Main area
-    st.header("📁 Upload File")
+    st.header("Upload File")
 
     uploaded_file = st.file_uploader(
-        "Upload PDF or TXT",
+        "Upload PDF or TXT file",
         type=['pdf', 'txt'],
         help="Supports normal and scanned PDFs"
     )
@@ -388,14 +570,14 @@ def main():
             with st.spinner("Extracting text from file..."):
                 text = read_file_with_pdf_support(tmp_path)
                 st.session_state.extracted_text = text
-                st.success(f"✅ Text extracted: {len(text)} characters")
+                st.success(f"Text extracted: {len(text)} characters")
 
-            with st.expander("📄 Show extracted text"):
+            with st.expander("Show extracted text"):
                 st.text_area("Content", text, height=200)
 
             # Poem splitting section
             if not st.session_state.proceed_to_analysis:
-                st.header("✂️ Poem Splitting")
+                st.header("Poem Splitting")
                 
                 split_mode = st.radio(
                     "How do you want to split the poems?",
@@ -424,7 +606,7 @@ def main():
                         display_text = ""
                         for i, line in enumerate(st.session_state.all_lines):
                             if i in st.session_state.splitters:
-                                display_text += f"\n--- **SPLITTER** (before line {i+1}) ---\n"
+                                display_text += f"\n--- SPLITTER (before line {i+1}) ---\n"
                             display_text += line + "\n"
                         st.text_area("Preview", display_text, height=400)
                     
@@ -457,7 +639,7 @@ def main():
                         
                         st.markdown(f"**Splitters:** {', '.join(map(str, sorted(st.session_state.splitters)))}")
                         
-                        if st.button("🚀 Confirm & Analyze", type="primary"):
+                        if st.button("Confirm and Analyze", type="primary"):
                             poems = split_text_at_indices(text, st.session_state.splitters)
                             st.session_state.final_poems = poems
                             st.session_state.proceed_to_analysis = True
@@ -467,9 +649,9 @@ def main():
                 
                 else:  # Automatic
                     poems = split_poems_auto(text)
-                    st.info(f"📊 Found {len(poems)} poems")
+                    st.info(f"Found {len(poems)} poems")
                     
-                    if st.button("✅ Confirm & Analyze", type="primary"):
+                    if st.button("Confirm and Analyze", type="primary"):
                         st.session_state.final_poems = poems
                         st.session_state.proceed_to_analysis = True
                         st.rerun()
@@ -483,11 +665,15 @@ def main():
                     st.session_state.proceed_to_analysis = False
                     st.rerun()
                 
-                st.header("🔬 Analysis")
-                st.info(f"Analyzing {len(poems)} poem(s)...")
+                st.header("Analysis")
+                st.info(f"Analyzing {len(poems)} poem(s) in {analysis_mode} mode...")
                 
-                if st.button("▶️ Start Analysis", type="primary"):
-                    analyzer = load_analyzer()
+                if st.button("Start Analysis", type="primary"):
+                    # Load appropriate analyzer
+                    if analysis_mode == "Classical (ʿArūḍ only)":
+                        analyzer = load_classical_analyzer()
+                    else:
+                        analyzer = load_enhanced_analyzer()
                     
                     progress_bar = st.progress(0)
                     results_container = st.container()
@@ -498,57 +684,77 @@ def main():
                         progress_bar.progress((i + 1) / len(poems))
                         
                         try:
-                            analysis = analyzer.analyze_poem(poem_text)
-                            all_results.append({
-                                'poem_text': poem_text,
-                                'poem_num': i+1,
-                                'analysis': analysis,
-                                'success': True
-                            })
+                            if analysis_mode == "Classical (ʿArūḍ only)":
+                                analysis = analyzer.analyze_poem(poem_text)
+                                # Convert to dict for consistency
+                                all_results.append({
+                                    'poem_text': poem_text,
+                                    'poem_num': i+1,
+                                    'analysis': analysis,
+                                    'success': True,
+                                    'mode': 'classical'
+                                })
+                            else:
+                                analysis = analyzer.analyze_poem(poem_text)
+                                all_results.append({
+                                    'poem_text': poem_text,
+                                    'poem_num': i+1,
+                                    'analysis': analysis,
+                                    'success': True,
+                                    'mode': 'enhanced'
+                                })
                         except Exception as e:
                             logger.error(f"Error in poem {i+1}: {e}")
                             all_results.append({
                                 'poem_text': poem_text,
                                 'poem_num': i+1,
                                 'error': str(e),
-                                'success': False
+                                'success': False,
+                                'mode': analysis_mode
                             })
                     
                     progress_bar.empty()
                     
                     with results_container:
                         st.markdown("---")
-                        st.header("📈 Results")
+                        st.header("Results")
                         
                         col1, col2, col3 = st.columns(3)
                         successful = sum(1 for r in all_results if r['success'])
                         
                         with col1:
-                            st.metric("Total", len(all_results))
+                            st.metric("Total Poems", len(all_results))
                         with col2:
-                            st.metric("Successful", successful)
+                            st.metric("Successful Analyses", successful)
                         with col3:
-                            st.metric("Failed", len(all_results) - successful)
+                            st.metric("Failed Analyses", len(all_results) - successful)
                         
                         st.markdown("---")
                         
                         for result in all_results:
                             if not result['success']:
-                                st.error(f"❌ Poem {result['poem_num']}: {result['error']}")
+                                st.error(f"Poem {result['poem_num']}: {result['error']}")
                                 continue
                             
-                            display_results(
-                                result['analysis'],
-                                result['poem_num'],
-                                result['poem_text']
-                            )
+                            if result['mode'] == 'classical':
+                                display_classical_results(
+                                    result['analysis'],
+                                    result['poem_num'],
+                                    result['poem_text']
+                                )
+                            else:
+                                display_enhanced_results(
+                                    result['analysis'],
+                                    result['poem_num'],
+                                    result['poem_text']
+                                )
                     
-                    st.success("✅ Analysis completed!")
+                    st.success("Analysis completed!")
                     
                     # Generate Excel Report
                     if successful > 0:
                         st.markdown("---")
-                        st.subheader("📥 Download Report")
+                        st.subheader("Download Report")
                         
                         try:
                             # Prepare data for ExcelReporter
@@ -559,8 +765,11 @@ def main():
                                     first_line = result['poem_text'].split('\n')[0].strip()
                                     title = first_line[:50] if len(first_line) > 50 else first_line
                                     
-                                    # Validate analysis
-                                    validation = QualityValidator.validate_analysis(result['analysis'])
+                                    # Get validation data
+                                    if result['mode'] == 'classical':
+                                        validation = QualityValidator.validate_analysis(result['analysis'])
+                                    else:
+                                        validation = result['analysis'].quality_metrics
                                     
                                     excel_data.append({
                                         'poem_id': f"P{result['poem_num']:03d}",
@@ -572,7 +781,8 @@ def main():
                             
                             # Create Excel report
                             excel_reporter = ExcelReporter()
-                            excel_filename = f"tajik_poetry_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                            mode_suffix = "classical" if analysis_mode == "Classical (ʿArūḍ only)" else "enhanced"
+                            excel_filename = f"tajik_poetry_{mode_suffix}_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
                             excel_path = Path(tempfile.gettempdir()) / excel_filename
                             excel_reporter.create_report(excel_data, str(excel_path))
                             
@@ -581,19 +791,19 @@ def main():
                                 excel_bytes = f.read()
                             
                             st.download_button(
-                                label="📊 Download Excel Report",
+                                label="Download Excel Report",
                                 data=excel_bytes,
                                 file_name=excel_filename,
                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                             )
                             
-                            st.info(f"Report contains {len(excel_data)} poems with structural analysis, quality metrics, and more.")
+                            st.info(f"Report contains {len(excel_data)} poems with detailed analysis.")
                             
                         except Exception as e:
                             logger.error(f"Error creating Excel report: {e}")
                             st.error(f"Could not create Excel report: {e}")
                     
-                    if st.button("🔄 Start over"):
+                    if st.button("Start over"):
                         st.session_state.splitters = []
                         st.session_state.all_lines = []
                         st.session_state.proceed_to_analysis = False
@@ -605,18 +815,44 @@ def main():
                 tmp_path.unlink()
 
     else:
-        st.info("👆 Please upload a PDF or TXT file to begin.")
+        st.info("Please upload a PDF or TXT file to begin.")
         
         st.markdown("---")
-        st.subheader("🎯 What this analyzer can do:")
+        st.subheader("Analysis Capabilities")
         
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Classical Analysis:**")
+            st.markdown("""
+            - 16 Classical ʿArūḍ Meters
+            - Qāfiyeh (rhyme) & Radīf (refrain) detection
+            - Prosodic weight calculation (Heavy/Light syllables)
+            - Phonetic transcription (IPA)
+            - Scientific quality validation
+            - PDF & OCR support for scanned documents
+            """)
+        
+        with col2:
+            st.markdown("**Enhanced Analysis:**")
+            st.markdown("""
+            - Free verse detection
+            - Modern verse metrics
+            - Enjambement analysis
+            - Line variation assessment
+            - Prose-poetry scoring
+            - Visual structure analysis
+            - All classical features included
+            """)
+        
+        st.markdown("---")
+        st.subheader("Research Applications")
         st.markdown("""
-        - **16 Classical ʿArūḍ Meters** (ṭawīl, basīṭ, wāfir, kāmil, etc.)
-        - **Qāfiyeh (rhyme) & Radīf (refrain) detection**
-        - **Prosodic weight calculation** (Heavy/Light syllables)
-        - **Phonetic transcription** (IPA)
-        - **Scientific quality validation**
-        - **PDF & OCR support** for scanned documents
+        - **Literary Studies**: Analysis of classical and modern Tajik poetry
+        - **Linguistics**: Phonetic and prosodic analysis of Tajik language
+        - **Digital Humanities**: Computational analysis of poetic structures
+        - **Comparative Literature**: Comparison of Persianate poetic traditions
+        - **Text Analysis**: Statistical analysis of poetic content and themes
         """)
 
 
