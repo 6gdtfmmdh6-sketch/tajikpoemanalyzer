@@ -757,289 +757,470 @@ def collect_volume_metadata():
         }
         
 def display_library_management(all_results: List[Dict[str, Any]]):
-    """Display library management section"""
+    """Display library management section with proper state handling"""
     st.markdown("---")
-    st.header("📚 Library & Corpus Management")
+    st.header("Library & Corpus Management")
     
-    # Initialize session state for metadata
-    if 'metadata_collected' not in st.session_state:
-        st.session_state.metadata_collected = False
-    if 'volume_metadata' not in st.session_state:
-        st.session_state.volume_metadata = None
-    if 'library_submitted' not in st.session_state:
-        st.session_state.library_submitted = False
+    # Initialize library session state
+    if 'lib_state' not in st.session_state:
+        st.session_state.lib_state = {
+            'step': 1,  # 1: collect metadata, 2: confirm, 3: success
+            'metadata': None,
+            'submitted': False,
+            'volume_id': None,
+            'results': all_results  # Store results separately
+        }
     
-    # Tab selection for different management options
+    # Tab selection
     tab1, tab2, tab3 = st.tabs(["📖 Add to Library", "📊 Library Statistics", "📤 Export & Share"])
     
     with tab1:
-        # Only show form if metadata not already collected
-        if not st.session_state.metadata_collected:
-            # Volume metadata collection
-            metadata = collect_volume_metadata()
-            
-            if metadata:
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("➕ Add Volume to Library", type="primary", key="add_to_lib_btn"):
-                        # Save metadata to session state
-                        st.session_state.volume_metadata = metadata
-                        st.session_state.metadata_collected = True
-                        # Don't rerun here - let the next part handle it
-                        st.rerun()
-                with col2:
-                    if st.button("❌ Cancel", key="cancel_lib_btn"):
-                        st.session_state.metadata_collected = False
-                        st.session_state.volume_metadata = None
-                        st.rerun()
+        current_state = st.session_state.lib_state
         
-        # Process the saved metadata
-        elif st.session_state.metadata_collected and st.session_state.volume_metadata and not st.session_state.library_submitted:
-            metadata = st.session_state.volume_metadata
+        if current_state['step'] == 1:
+            # STEP 1: Collect metadata
+            display_metadata_collection()
             
-            st.success("✅ Volume metadata collected! Ready to add to library.")
+        elif current_state['step'] == 2:
+            # STEP 2: Confirm and submit
+            display_confirmation_step(current_state)
             
-            # Show metadata summary
-            with st.expander("📋 Metadata Summary", expanded=True):
-                if LIBRARY_MANAGER_AVAILABLE:
-                    st.json(metadata.to_dict())
-                else:
-                    st.json(metadata)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("✅ Confirm and Add to Library", type="primary", key="confirm_lib_btn"):
-                    successful_results = [r for r in all_results if r.get('success', False)]
-                    
-                    if not successful_results:
-                        st.error("No successful analyses to add to library.")
-                        st.session_state.library_submitted = False
-                    else:
-                        if LIBRARY_MANAGER_AVAILABLE:
-                            try:
-                                # Prepare poems data
-                                poems_data = []
-                                for result in successful_results:
-                                    # Convert analysis to dict if it's an object
-                                    analysis_data = result['analysis']
-                                    if hasattr(analysis_data, '__dict__'):
-                                        analysis_dict = asdict(analysis_data)
-                                    else:
-                                        analysis_dict = analysis_data
-                                    
-                                    poems_data.append({
-                                        'content': result['poem_text'],
-                                        'analysis': analysis_dict,
-                                        'poem_num': result['poem_num']
-                                    })
-                                
-                                # Initialize library manager
-                                library_manager = TajikLibraryManager()
-                                
-                                # Register volume
-                                with st.spinner("Registering volume in library..."):
-                                    volume_id = library_manager.register_volume(metadata, poems_data)
-                                    
-                                    # Generate timeline report
-                                    html_report = library_manager.generate_timeline_report("html")
-                                    
-                                    # Save report
-                                    report_path = Path(library_manager.library_path) / "timeline" / f"report_{volume_id}.html"
-                                    report_path.parent.mkdir(exist_ok=True)
-                                    with open(report_path, 'w', encoding='utf-8') as f:
-                                        f.write(html_report)
-                                    
-                                    st.session_state.library_submitted = True
-                                    st.session_state.volume_id = volume_id
-                                    st.session_state.html_report = html_report
-                                    st.session_state.library_manager = library_manager
-                                    
-                                    st.success(f"✅ Volume successfully registered: {volume_id}")
-                                    st.rerun()
-                            
-                            except Exception as e:
-                                st.error(f"Error registering volume: {e}")
-                                logger.error(f"Library registration error: {e}")
-                                st.session_state.library_submitted = False
-                        else:
-                            # Fallback to basic corpus manager
-                            if CORPUS_MANAGER_AVAILABLE:
-                                # Reset metadata state since we're switching to basic mode
-                                st.session_state.metadata_collected = False
-                                st.session_state.volume_metadata = None
-                                st.rerun()
-                            else:
-                                st.warning("Neither library manager nor basic corpus manager is available.")
-                                st.session_state.library_submitted = False
-            
-            with col2:
-                if st.button("🔄 Edit Metadata", key="edit_metadata_btn"):
-                    st.session_state.metadata_collected = False
-                    st.session_state.volume_metadata = None
-                    st.rerun()
-        
-        # Show success message after submission
-        elif st.session_state.library_submitted:
-            st.success("✅ Volume successfully added to library!")
-            
-            # Show quick statistics
-            if hasattr(st.session_state, 'library_manager'):
-                try:
-                    corpus = st.session_state.library_manager.load_corpus()
-                    stats = corpus["statistics"]
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Total Volumes", stats["total_volumes"])
-                    with col2:
-                        st.metric("Total Poems", stats["total_poems"])
-                    with col3:
-                        earliest = stats["publication_years"]["min"] or "—"
-                        st.metric("Earliest Volume", earliest)
-                    with col4:
-                        latest = stats["publication_years"]["max"] or "—"
-                        st.metric("Latest Volume", latest)
-                    
-                    # Show timeline visualization
-                    if hasattr(st.session_state, 'html_report'):
-                        st.markdown("### Timeline Visualization")
-                        st.components.v1.html(st.session_state.html_report, height=600, scrolling=True)
-                    
-                    # Export options
-                    st.markdown("### 📥 Download Options")
-                    col_dl1, col_dl2 = st.columns(2)
-                    
-                    with col_dl1:
-                        if st.button("📊 Download Timeline Report"):
-                            html_report = st.session_state.html_report
-                            st.download_button(
-                                label="Download HTML",
-                                data=html_report,
-                                file_name=f"timeline_{st.session_state.volume_id}.html",
-                                mime="text/html"
-                            )
-                    
-                    with col_dl2:
-                        if st.button("📁 Export Library Data"):
-                            corpus = st.session_state.library_manager.load_corpus()
-                            json_data = json.dumps(corpus, ensure_ascii=False, indent=2)
-                            st.download_button(
-                                label="Download JSON",
-                                data=json_data,
-                                file_name=f"tajik_library_{datetime.now().strftime('%Y%m%d')}.json",
-                                mime="application/json"
-                            )
-                    
-                except Exception as e:
-                    st.error(f"Error displaying results: {e}")
-            
-            # Option to add another volume
-            if st.button("➕ Add Another Volume"):
-                # Reset all library-related session state
-                for key in ['metadata_collected', 'volume_metadata', 'library_submitted', 
-                           'volume_id', 'html_report', 'library_manager']:
-                    if key in st.session_state:
-                        del st.session_state[key]
-                st.rerun()
+        elif current_state['step'] == 3:
+            # STEP 3: Success display
+            display_success_step(current_state)
     
     with tab2:
-        # Library statistics (unchanged)
-        if LIBRARY_MANAGER_AVAILABLE:
-            try:
-                library_manager = TajikLibraryManager()
-                corpus = library_manager.load_corpus()
-                stats = corpus["statistics"]
-                
-                st.subheader("📊 Library Statistics")
-                
-                # Overall metrics
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Volumes", stats["total_volumes"])
-                    st.metric("Poems", stats["total_poems"])
-                with col2:
-                    st.metric("Lines", stats.get("total_lines", 0))
-                    st.metric("Words", stats.get("total_words", 0))
-                with col3:
-                    st.metric("Unique Words", stats.get("unique_words", 0))
-                    st.metric("Authors", stats.get("authors_count", 0))
-                
-                # Timeline distribution
-                st.subheader("Timeline Distribution")
-                
-                # By period
-                if "period_distribution" in stats and stats["period_distribution"]:
-                    st.write("**By Historical Period:**")
-                    for period, count in sorted(stats["period_distribution"].items()):
-                        st.write(f"- {period}: {count} volumes")
-                
-                # By year
-                if "publication_years" in stats and stats["publication_years"].get("distribution"):
-                    st.write("**Publication Year Range:**")
-                    years = stats["publication_years"]
-                    st.write(f"- From: {years.get('min', '—')}")
-                    st.write(f"- To: {years.get('max', '—')}")
-                    st.write(f"- Years covered: {len(years.get('distribution', {}))}")
-                
-                # Meter distribution
-                if "meter_distribution" in stats and stats["meter_distribution"]:
-                    st.subheader("Meter Distribution")
-                    for meter, count in sorted(stats["meter_distribution"].items(), key=lambda x: -x[1])[:10]:
-                        st.write(f"- {meter}: {count}")
-                
-                # Theme distribution
-                if "theme_distribution" in stats and stats["theme_distribution"]:
-                    st.subheader("Theme Distribution")
-                    for theme, count in sorted(stats["theme_distribution"].items(), key=lambda x: -x[1])[:5]:
-                        st.write(f"- {theme}: {count}")
-                        
-            except Exception as e:
-                st.error(f"Error loading library statistics: {e}")
-        else:
-            st.info("Extended library statistics require the extended library manager.")
+        # Library statistics (unchanged from previous version)
+        display_library_statistics()
     
     with tab3:
-        # Export options (unchanged)
-        st.subheader("Export Options")
+        # Export options (unchanged from previous version)
+        display_export_options()
+
+
+def display_metadata_collection():
+    """Step 1: Collect volume metadata"""
+    st.subheader("Add New Volume to Library")
+    
+    # Create form to collect metadata
+    with st.form(key="volume_metadata_form"):
+        col1, col2 = st.columns(2)
         
+        with col1:
+            author_name = st.text_input("Author / Full Name*")
+            author_birth = st.number_input("Birth Year (optional)", 
+                                          min_value=1000, 
+                                          max_value=2024, 
+                                          value=None,
+                                          step=1)
+            author_death = st.number_input("Death Year (optional)", 
+                                          min_value=1000, 
+                                          max_value=2024, 
+                                          value=None,
+                                          step=1)
+            
+        with col2:
+            volume_title = st.text_input("Title of Poetry Volume*")
+            publication_year = st.number_input("Publication Year*", 
+                                             min_value=1800, 
+                                             max_value=2024, 
+                                             value=2023,
+                                             step=1)
+            publisher = st.text_input("Publisher (optional)")
+        
+        # Additional fields
+        city = st.text_input("Place of Publication (optional)")
+        isbn = st.text_input("ISBN (optional)")
+        
+        # Genres
         if LIBRARY_MANAGER_AVAILABLE:
-            try:
+            genre_options = [g.value for g in Genre]
+            selected_genres = st.multiselect("Literary Genres", options=genre_options)
+            genres = [Genre(g) for g in selected_genres]
+        else:
+            genres = []
+        
+        # Period (auto-inferred but can be changed)
+        if LIBRARY_MANAGER_AVAILABLE:
+            period_options = {p.value: p for p in Period}
+            default_period = None
+            
+            if publication_year:
+                if publication_year < 1920:
+                    default_period = Period.CLASSICAL.value
+                elif 1920 <= publication_year < 1940:
+                    default_period = Period.SOVIET_EARLY.value
+                elif 1940 <= publication_year < 1970:
+                    default_period = Period.SOVIET_MID.value
+                elif 1970 <= publication_year < 1991:
+                    default_period = Period.SOVIET_LATE.value
+                elif 1991 <= publication_year < 2000:
+                    default_period = Period.INDEPENDENCE.value
+                else:
+                    default_period = Period.CONTEMPORARY.value
+            
+            default_index = list(period_options.keys()).index(default_period) if default_period in period_options else 0
+            selected_period_value = st.selectbox(
+                "Historical Period*",
+                options=list(period_options.keys()),
+                index=default_index
+            )
+            selected_period = period_options[selected_period_value]
+        else:
+            selected_period = None
+        
+        # Source type
+        source_type = st.radio("Source Type", ["printed", "manuscript", "digital"], horizontal=True)
+        
+        # Notes
+        notes = st.text_area("Additional Notes (optional)", height=100)
+        
+        # Form buttons
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            submit_button = st.form_submit_button("👉 Continue to Review", type="primary")
+        with col_btn2:
+            cancel_button = st.form_submit_button("❌ Cancel")
+        
+        if submit_button:
+            # Validate required fields
+            if not author_name or not volume_title:
+                st.error("Please fill in the required fields marked with *")
+                return
+            
+            # Create metadata object
+            if LIBRARY_MANAGER_AVAILABLE:
+                metadata = VolumeMetadata(
+                    author_name=author_name,
+                    author_birth_year=int(author_birth) if author_birth else None,
+                    author_death_year=int(author_death) if author_death else None,
+                    volume_title=volume_title,
+                    publication_year=int(publication_year),
+                    publisher=publisher if publisher else None,
+                    city=city if city else None,
+                    genres=genres,
+                    period=selected_period,
+                    isbn=isbn if isbn else None,
+                    pages=None,  # Could add field for this
+                    source_type=source_type,
+                    notes=notes if notes else None
+                )
+            else:
+                # Basic metadata dict
+                metadata = {
+                    "author_name": author_name,
+                    "author_birth_year": int(author_birth) if author_birth else None,
+                    "author_death_year": int(author_death) if author_death else None,
+                    "volume_title": volume_title,
+                    "publication_year": int(publication_year),
+                    "publisher": publisher if publisher else None,
+                    "city": city if city else None,
+                    "isbn": isbn if isbn else None,
+                    "source_type": source_type,
+                    "notes": notes if notes else None
+                }
+            
+            # Store metadata in session state and move to step 2
+            st.session_state.lib_state['metadata'] = metadata
+            st.session_state.lib_state['step'] = 2
+            st.rerun()
+        
+        elif cancel_button:
+            # Reset to step 1
+            st.session_state.lib_state['step'] = 1
+            st.session_state.lib_state['metadata'] = None
+            st.rerun()
+
+
+def display_confirmation_step(current_state):
+    """Step 2: Confirm metadata and submit to library"""
+    st.subheader("Review and Confirm")
+    
+    metadata = current_state['metadata']
+    
+    if not metadata:
+        st.error("No metadata found. Please go back and fill in the form.")
+        st.session_state.lib_state['step'] = 1
+        st.rerun()
+        return
+    
+    # Display metadata summary
+    st.success("Metadata collected successfully!")
+    
+    with st.expander("Metadata Summary", expanded=True):
+        if isinstance(metadata, VolumeMetadata):
+            st.json(metadata.to_dict())
+        else:
+            st.json(metadata)
+    
+    # Show poem count
+    successful_results = [r for r in current_state['results'] if r.get('success', False)]
+    st.info(f"This volume will contain **{len(successful_results)}** analyzed poems")
+    
+    # Action buttons
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("Add to Library", type="primary", use_container_width=True):
+            # Process the submission
+            process_library_submission(metadata, successful_results)
+    
+    with col2:
+        if st.button("Edit Metadata", use_container_width=True):
+            st.session_state.lib_state['step'] = 1
+            st.rerun()
+    
+    with col3:
+        if st.button("🗑️ Cancel", use_container_width=True):
+            # Reset everything
+            st.session_state.lib_state = {
+                'step': 1,
+                'metadata': None,
+                'submitted': False,
+                'volume_id': None,
+                'results': current_state['results']
+            }
+            st.rerun()
+
+
+def process_library_submission(metadata, successful_results):
+    """Process the library submission"""
+    with st.spinner("Adding volume to library..."):
+        try:
+            if LIBRARY_MANAGER_AVAILABLE and isinstance(metadata, VolumeMetadata):
+                # Prepare poems data
+                poems_data = []
+                for result in successful_results:
+                    analysis_data = result['analysis']
+                    if hasattr(analysis_data, '__dict__'):
+                        analysis_dict = asdict(analysis_data)
+                    else:
+                        analysis_dict = analysis_data
+                    
+                    poems_data.append({
+                        'content': result['poem_text'],
+                        'analysis': analysis_dict,
+                        'poem_num': result['poem_num']
+                    })
+                
+                # Initialize library manager
                 library_manager = TajikLibraryManager()
                 
-                col1, col2 = st.columns(2)
+                # Register volume
+                volume_id = library_manager.register_volume(metadata, poems_data)
                 
-                with col1:
-                    if st.button("📁 Export Complete Library (JSON)"):
-                        corpus = library_manager.load_corpus()
-                        json_data = json.dumps(corpus, ensure_ascii=False, indent=2)
-                        
-                        st.download_button(
-                            label="Download JSON",
-                            data=json_data,
-                            file_name=f"tajik_poetry_library_{datetime.now().strftime('%Y%m%d')}.json",
-                            mime="application/json"
-                        )
+                # Generate timeline report
+                html_report = library_manager.generate_timeline_report("html")
                 
-                with col2:
-                    if st.button("📊 Generate Timeline Report"):
-                        html_report = library_manager.generate_timeline_report("html")
-                        
-                        st.download_button(
-                            label="Download HTML Report",
-                            data=html_report,
-                            file_name=f"timeline_report_{datetime.now().strftime('%Y%m%d')}.html",
-                            mime="text/html"
-                        )
+                # Save to session state
+                st.session_state.lib_state.update({
+                    'step': 3,
+                    'submitted': True,
+                    'volume_id': volume_id,
+                    'html_report': html_report,
+                    'library_manager': library_manager
+                })
                 
-                # Git export
-                st.subheader("Git Export for Collaboration")
-                if st.button("🔗 Prepare Git Export"):
-                    try:
-                        export_path = library_manager.export_contributions_for_git()
-                        st.success(f"Export prepared: `{export_path}`")
-                        
-                        # Show Git commands
-                        git_commands = f"""
+                st.success(f"Volume '{metadata.volume_title}' added to library!")
+                st.rerun()
+                
+            elif CORPUS_MANAGER_AVAILABLE:
+                # Fallback to basic corpus manager
+                display_basic_corpus_section(successful_results)
+                st.session_state.lib_state['step'] = 1  # Reset to step 1
+                st.rerun()
+                
+            else:
+                st.error("No library manager available.")
+                st.session_state.lib_state['step'] = 1
+                st.rerun()
+                
+        except Exception as e:
+            st.error(f"Error adding to library: {str(e)}")
+            logger.error(f"Library submission error: {e}")
+            st.session_state.lib_state['step'] = 2  # Go back to confirmation
+
+
+def display_success_step(current_state):
+    """Step 3: Display success message and options"""
+    st.subheader("Volume Successfully Added!")
+    
+    if current_state.get('volume_id'):
+        st.success(f"Volume ID: `{current_state['volume_id']}`")
+    
+    # Show statistics if available
+    if current_state.get('library_manager'):
+        try:
+            library_manager = current_state['library_manager']
+            corpus = library_manager.load_corpus()
+            stats = corpus["statistics"]
+            
+            st.markdown("### Library Updated")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Volumes", stats["total_volumes"])
+            with col2:
+                st.metric("Total Poems", stats["total_poems"])
+            with col3:
+                st.metric("Total Authors", len(corpus.get("authors", {})))
+            
+            # Show timeline if available
+            if current_state.get('html_report'):
+                with st.expander("View Timeline Report", expanded=False):
+                    st.components.v1.html(current_state['html_report'], height=500, scrolling=True)
+            
+            # Download options
+            st.markdown("### Download Options")
+            col_dl1, col_dl2 = st.columns(2)
+            
+            with col_dl1:
+                if st.button("Download Timeline Report"):
+                    html_report = current_state['html_report']
+                    st.download_button(
+                        label="Download HTML",
+                        data=html_report,
+                        file_name=f"timeline_{current_state['volume_id']}.html",
+                        mime="text/html",
+                        key="dl_timeline"
+                    )
+            
+            with col_dl2:
+                if st.button("📁 Export Library Data"):
+                    corpus = library_manager.load_corpus()
+                    json_data = json.dumps(corpus, ensure_ascii=False, indent=2)
+                    st.download_button(
+                        label="Download JSON",
+                        data=json_data,
+                        file_name=f"tajik_library_{datetime.now().strftime('%Y%m%d')}.json",
+                        mime="application/json",
+                        key="dl_json"
+                    )
+                    
+        except Exception as e:
+            st.error(f"Error displaying library data: {e}")
+    
+    # Action buttons
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("➕ Add Another Volume", type="primary", use_container_width=True):
+            # Reset to step 1 but keep results
+            st.session_state.lib_state = {
+                'step': 1,
+                'metadata': None,
+                'submitted': False,
+                'volume_id': None,
+                'results': current_state['results']
+            }
+            st.rerun()
+    
+    with col2:
+        if st.button("Back to Analysis", use_container_width=True):
+            # Keep state but don't rerun - let user navigate manually
+            st.info("Use the tabs above to view analysis results or add more volumes.")
+
+
+def display_library_statistics():
+    """Display library statistics tab"""
+    if LIBRARY_MANAGER_AVAILABLE:
+        try:
+            library_manager = TajikLibraryManager()
+            corpus = library_manager.load_corpus()
+            stats = corpus["statistics"]
+            
+            st.subheader("Library Statistics")
+            
+            # Overall metrics
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Volumes", stats["total_volumes"])
+                st.metric("Poems", stats["total_poems"])
+            with col2:
+                st.metric("Lines", stats.get("total_lines", 0))
+                st.metric("Words", stats.get("total_words", 0))
+            with col3:
+                st.metric("Unique Words", stats.get("unique_words", 0))
+                st.metric("Authors", stats.get("authors_count", 0))
+            
+            # Timeline distribution
+            st.subheader("Timeline Distribution")
+            
+            # By period
+            if "period_distribution" in stats and stats["period_distribution"]:
+                st.write("**By Historical Period:**")
+                for period, count in sorted(stats["period_distribution"].items()):
+                    st.write(f"- {period}: {count} volumes")
+            
+            # By year
+            if "publication_years" in stats and stats["publication_years"].get("distribution"):
+                st.write("**Publication Year Range:**")
+                years = stats["publication_years"]
+                st.write(f"- From: {years.get('min', '—')}")
+                st.write(f"- To: {years.get('max', '—')}")
+                st.write(f"- Years covered: {len(years.get('distribution', {}))}")
+            
+            # Meter distribution
+            if "meter_distribution" in stats and stats["meter_distribution"]:
+                st.subheader("Meter Distribution")
+                for meter, count in sorted(stats["meter_distribution"].items(), key=lambda x: -x[1])[:10]:
+                    st.write(f"- {meter}: {count}")
+            
+            # Theme distribution
+            if "theme_distribution" in stats and stats["theme_distribution"]:
+                st.subheader("Theme Distribution")
+                for theme, count in sorted(stats["theme_distribution"].items(), key=lambda x: -x[1])[:5]:
+                    st.write(f"- {theme}: {count}")
+                    
+        except Exception as e:
+            st.error(f"Error loading library statistics: {e}")
+    else:
+        st.info("Extended library statistics require the extended library manager.")
+
+
+def display_export_options():
+    """Display export options tab"""
+    st.subheader("Export Options")
+    
+    if LIBRARY_MANAGER_AVAILABLE:
+        try:
+            library_manager = TajikLibraryManager()
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("Export Complete Library (JSON)"):
+                    corpus = library_manager.load_corpus()
+                    json_data = json.dumps(corpus, ensure_ascii=False, indent=2)
+                    
+                    st.download_button(
+                        label="Download JSON",
+                        data=json_data,
+                        file_name=f"tajik_poetry_library_{datetime.now().strftime('%Y%m%d')}.json",
+                        mime="application/json"
+                    )
+            
+            with col2:
+                if st.button("Generate Timeline Report"):
+                    html_report = library_manager.generate_timeline_report("html")
+                    
+                    st.download_button(
+                        label="Download HTML Report",
+                        data=html_report,
+                        file_name=f"timeline_report_{datetime.now().strftime('%Y%m%d')}.html",
+                        mime="text/html"
+                    )
+            
+            # Git export
+            st.subheader("Git Export for Collaboration")
+            if st.button("Prepare Git Export"):
+                try:
+                    export_path = library_manager.export_contributions_for_git()
+                    st.success(f"Export prepared: `{export_path}`")
+                    
+                    # Show Git commands
+                    git_commands = f"""
 # Git Commands for Sharing:
 1. Navigate to your repository:
    cd /path/to/your/tajik-poetry-repo
@@ -1057,15 +1238,15 @@ def display_library_management(all_results: List[Dict[str, Any]]):
 5. Push to GitHub:
    git push origin new-contributions-{datetime.now().strftime('%Y%m%d')}
 """
-                        
-                        st.code(git_commands, language="bash")
-                    except Exception as e:
-                        st.error(f"Export preparation failed: {e}")
-                        
-            except Exception as e:
-                st.error(f"Export error: {e}")
-        else:
-            st.info("Extended export features require the extended library manager.")
+                    
+                    st.code(git_commands, language="bash")
+                except Exception as e:
+                    st.error(f"Export preparation failed: {e}")
+                    
+        except Exception as e:
+            st.error(f"Export error: {e}")
+    else:
+        st.info("Extended export features require the extended library manager.")
 
 
 def display_basic_corpus_section(all_results: List[Dict[str, Any]]):
