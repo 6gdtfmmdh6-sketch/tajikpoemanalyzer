@@ -1,0 +1,2713 @@
+{
+  "contribution_id": "a8fc47e87c547f1f_20260118_030947",
+  "poem_id": "P026",
+  "title": "БАРОИ ФАРДОҲО",
+  "metadata": {
+    "submission_date": "2026-01-18T03:09:47.935474",
+    "contributor": {
+      "anonymous": true
+    },
+    "software_version": "2.1.0",
+    "content_hash": "a8fc47e87c547f1f",
+    "source_language": "tg",
+    "license_accepted": true
+  },
+  "raw_text": "БАРОИ ФАРДОҲО\n\nРафт то хоби шақоиқҳо\nба тафсири сояҳои мармуз,\nВа решаи он садои осмониро дарёфт\nва замзама кард:\n«Зиндагӣ ин ҷо фаввораи гулҳои садоқатҳост!»\n– Кист он фирории гирифтарӯҳ?\n– Нафаре,\nки тамошои турнаҳои маҷзубро одат дошт\nва рафтани Офтобро\nбар дӯши ҳайли аспҳои сафед дар хоб медид.\nЭй дареғ,\nҳаргиз аз фазои гузашта\nқабутаре барнагашт.\nЗеро, осмони таърих ҳамеша бепаранда аст.\nЁ рафт то ба боғи мо борон биоварад,\nва ё ба дилҳо ишқ.\nВа ҳамеша аз хобе ҳарф мезад:\nСадои гусастани занҷир,\nва даре нимабоз, пушти дар нур\nва гандумакони сабзи норасида\nва сояи дасте руи ин хоб,\nгоҳ бар тан пироҳани сафед\nрӯ ба осмонҳо мерафт, гул мепошид,\nгоҳ сар ба зону мегирист,\nгоҳ такя бар девори моҳ\nдар фикри чизе буд,\nгоҳ таронае замзама мекард,\nбарои фардоҳо.",
+  "normalized_text": "БАРОИ ФАРДОҲО\n\nРафт то хоби шақоиқҳо\nба тафсири сояҳои мармуз,\nВа решаи он садои осмониро дарёфт\nва замзама кард:\n«Зиндагӣ ин ҷо фаввораи гулҳои садоқатҳост!»\n– Кист он фирории гирифтарӯҳ?\n– Нафаре,\nки тамошои турнаҳои маҷзубро одат дошт\nва рафтани Офтобро\nбар дӯши ҳайли аспҳои сафед дар хоб медид.\nЭй дареғ,\nҳаргиз аз фазои гузашта\nқабутаре барнагашт.\nЗеро, осмони таърих ҳамеша бепаранда аст.\nЁ рафт то ба боғи мо борон биоварад,\nва ё ба дилҳо ишқ.\nВа ҳамеша аз хобе ҳарф мезад:\nСадои гусастани занҷир,\nва даре нимабоз, пушти дар нур\nва гандумакони сабзи норасида\nва сояи дасте руи ин хоб,\nгоҳ бар тан пироҳани сафед\nрӯ ба осмонҳо мерафт, гул мепошид,\nгоҳ сар ба зону мегирист,\nгоҳ такя бар девори моҳ\nдар фикри чизе буд,\nгоҳ таронае замзама мекард,\nбарои фардоҳо.",
+  "analysis": {
+    "structural": {
+      "lines": 29,
+      "syllables_per_line": [
+        0,
+        8,
+        10,
+        14,
+        5,
+        16,
+        10,
+        3,
+        15,
+        6,
+        14,
+        2,
+        9,
+        7,
+        15,
+        12,
+        6,
+        10,
+        9,
+        10,
+        12,
+        10,
+        9,
+        11,
+        8,
+        8,
+        6,
+        10,
+        6
+      ],
+      "syllable_patterns": [
+        [],
+        [
+          {
+            "text": "афт",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "aft",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "то",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "to",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "хо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "xo",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "би",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "bi",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ша",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʃa",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "қо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "qo",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "иқ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "iq",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ho",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ба",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ba",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "таф",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "taf",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "сир",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "sir",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "со",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "so",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "я",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ja",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ho",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "марм",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "marm",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "уз",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "uz",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ре",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "re",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ша",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʃa",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "он",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "on",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "са",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "sa",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "до",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "do",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "осм",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "osm",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "он",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "on",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ир",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ir",
+            "position": 10,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "о",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "o",
+            "position": 11,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "дар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dar",
+            "position": 12,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ёфт",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "joft",
+            "position": 13,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ва",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "va",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "зам",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zam",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "зам",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zam",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "кард",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "kard",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ин",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "in",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "да",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "da",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "гӣ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "giː",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ин",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "in",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ҷо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʤo",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "фавв",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "favv",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ор",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "or",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "гул",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "gul",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ho",
+            "position": 10,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 11,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "са",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "sa",
+            "position": 12,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "до",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "do",
+            "position": 13,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "қат",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "qat",
+            "position": 14,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳост",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "host",
+            "position": 15,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ист",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ist",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "он",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "on",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "фир",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "fir",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ор",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "or",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "гир",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "gir",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "иф",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "if",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "тар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "tar",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ӯҳ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "uːh",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "фар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "far",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "е",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "e",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ки",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ki",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "там",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "tam",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "о",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "o",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "шо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʃo",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "турн",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "turn",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ho",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "маҷ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "maʤ",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "зубр",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zubr",
+            "position": 10,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "о",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "o",
+            "position": 11,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "о",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "o",
+            "position": 12,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "дат",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dat",
+            "position": 13,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "дошт",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "doʃt",
+            "position": 14,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ва",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "va",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "раф",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "raf",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "тан",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "tan",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "фтобр",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ftobr",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "о",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "o",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "бар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "bar",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "дӯ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "duː",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ши",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʃi",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ҳайл",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "hajl",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "асп",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "asp",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ho",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "са",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "sa",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "фед",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "fed",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "дар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dar",
+            "position": 10,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "хоб",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "xob",
+            "position": 11,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ме",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "me",
+            "position": 12,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "дид",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "did",
+            "position": 13,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "дар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dar",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "еғ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "eʁ",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ҳар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "har",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "гиз",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "giz",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "аз",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "az",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "фа",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "fa",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "зо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "zo",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "гу",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "gu",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "заш",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zaʃ",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "та",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ta",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "қа",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "qa",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "бу",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "bu",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "тар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "tar",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "е",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "e",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "барн",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "barn",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "гашт",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "gaʃt",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ер",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "er",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "о",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "o",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "осм",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "osm",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "он",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "on",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "та",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ta",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "рих",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "rix",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ҳам",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ham",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "е",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "e",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ша",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʃa",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "бе",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "be",
+            "position": 10,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "пар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "par",
+            "position": 11,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ан",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "an",
+            "position": 12,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "да",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "da",
+            "position": 13,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "аст",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ast",
+            "position": 14,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "рафт",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "raft",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "то",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "to",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ба",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ba",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "бо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "bo",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ғи",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʁi",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "мо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "mo",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "бор",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "bor",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "он",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "on",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "би",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "bi",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ов",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ov",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ar",
+            "position": 10,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ад",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ad",
+            "position": 11,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ва",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "va",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ё",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "jo",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ба",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ba",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "дил",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dil",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ho",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ишқ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "iʃq",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ҳам",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ham",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "е",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "e",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ша",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʃa",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "аз",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "az",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "хо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "xo",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "бе",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "be",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ҳарф",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "harf",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ме",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "me",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "зад",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zad",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "до",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "do",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "гу",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "gu",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "сас",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "sas",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "тан",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "tan",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "зан",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zan",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҷир",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ʤir",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ва",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "va",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "дар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dar",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "е",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "e",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ним",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "nim",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "боз",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "boz",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "пуш",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "puʃ",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ти",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ti",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "дар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dar",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "нур",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "nur",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ва",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "va",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ган",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "gan",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "дум",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dum",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "кон",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "kon",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "саб",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "sab",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "зи",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "zi",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "нор",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "nor",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "си",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "si",
+            "position": 10,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "да",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "da",
+            "position": 11,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "ва",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "va",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "со",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "so",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "я",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ja",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "дас",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "das",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "те",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "te",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ру",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ru",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ин",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "in",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "хоб",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "xob",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "гоҳ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "goh",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "бар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "bar",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "тан",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "tan",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "пир",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "pir",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "о",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "o",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳан",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "han",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "са",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "sa",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "фед",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "fed",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "рӯ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ruː",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ба",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ba",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "осм",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "osm",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "он",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "on",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ho",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "мер",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "mer",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "афт",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "aft",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "гул",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "gul",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ме",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "me",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "по",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "po",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "шид",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ʃid",
+            "position": 10,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "гоҳ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "goh",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "сар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "sar",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ба",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ba",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "зон",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zon",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "у",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "u",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ме",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "me",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "гир",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "gir",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ист",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ist",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "гоҳ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "goh",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "та",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ta",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "кя",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "kja",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "бар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "bar",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "дев",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dev",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ор",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "or",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "моҳ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "moh",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "дар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "dar",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "фикр",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "fikr",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "чи",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʧi",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "зе",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ze",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "буд",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "bud",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "гоҳ",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "goh",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "тар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "tar",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "он",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "on",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "е",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "e",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "зам",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zam",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "зам",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zam",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ме",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "me",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "кард",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "kard",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        [
+          {
+            "text": "бар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "bar",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "о",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "o",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "и",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "i",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "фар",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "far",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "до",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "do",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ҳо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ho",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ]
+      ],
+      "aruz_analysis": {
+        "identified_meter": "ṭawīl",
+        "pattern_match": "U—UU—UU—U—",
+        "confidence": "MeterConfidence.HIGH",
+        "pattern_accuracy": 0.8,
+        "variations_detected": [],
+        "line_scansion": [
+          {
+            "text": "а",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "a",
+            "position": 0,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ҳам",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "ham",
+            "position": 1,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "е",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "e",
+            "position": 2,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "ша",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "ʃa",
+            "position": 3,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "аз",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "az",
+            "position": 4,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "хо",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "xo",
+            "position": 5,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "бе",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "be",
+            "position": 6,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ҳарф",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "harf",
+            "position": 7,
+            "confidence": 0.85,
+            "stress_level": 2
+          },
+          {
+            "text": "ме",
+            "weight": "SyllableWeight.LIGHT",
+            "phonetic": "me",
+            "position": 8,
+            "confidence": 0.85,
+            "stress_level": 0
+          },
+          {
+            "text": "зад",
+            "weight": "SyllableWeight.HEAVY",
+            "phonetic": "zad",
+            "position": 9,
+            "confidence": 0.85,
+            "stress_level": 2
+          }
+        ],
+        "caesura_positions": [
+          8
+        ]
+      },
+      "rhyme_scheme": [
+        {
+          "qafiyeh": "ОҲО",
+          "radif": "",
+          "phonetic_rhyme": "oho",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "қҳо",
+          "radif": "",
+          "phonetic_rhyme": "qho",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "муз",
+          "radif": "",
+          "phonetic_rhyme": "muz",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ёфт",
+          "radif": "",
+          "phonetic_rhyme": "joft",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ард",
+          "radif": "",
+          "phonetic_rhyme": "ard",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ост",
+          "radif": "",
+          "phonetic_rhyme": "ost",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "рӯҳ",
+          "radif": "",
+          "phonetic_rhyme": "ruːh",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "аре",
+          "radif": "",
+          "phonetic_rhyme": "are",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ошт",
+          "radif": "",
+          "phonetic_rhyme": "oʃt",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "бро",
+          "radif": "",
+          "phonetic_rhyme": "bro",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "дид",
+          "radif": "",
+          "phonetic_rhyme": "did",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "реғ",
+          "radif": "",
+          "phonetic_rhyme": "reʁ",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "шта",
+          "radif": "",
+          "phonetic_rhyme": "ʃta",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ашт",
+          "radif": "",
+          "phonetic_rhyme": "aʃt",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "аст",
+          "radif": "",
+          "phonetic_rhyme": "ast",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "рад",
+          "radif": "",
+          "phonetic_rhyme": "rad",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ишқ",
+          "radif": "",
+          "phonetic_rhyme": "iʃq",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "зад",
+          "radif": "",
+          "phonetic_rhyme": "zad",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ҷир",
+          "radif": "",
+          "phonetic_rhyme": "ʤir",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "нур",
+          "radif": "",
+          "phonetic_rhyme": "nur",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ида",
+          "radif": "",
+          "phonetic_rhyme": "ida",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "хоб",
+          "radif": "",
+          "phonetic_rhyme": "xob",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "фед",
+          "radif": "",
+          "phonetic_rhyme": "fed",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "шид",
+          "radif": "",
+          "phonetic_rhyme": "ʃid",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ист",
+          "radif": "",
+          "phonetic_rhyme": "ist",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "моҳ",
+          "radif": "",
+          "phonetic_rhyme": "moh",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "буд",
+          "radif": "",
+          "phonetic_rhyme": "bud",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "ард",
+          "radif": "",
+          "phonetic_rhyme": "ard",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        },
+        {
+          "qafiyeh": "оҳо",
+          "radif": "",
+          "phonetic_rhyme": "oho",
+          "rhyme_type": "rich",
+          "rhyme_position": "end",
+          "confidence": 0.85
+        }
+      ],
+      "rhyme_pattern": "free_rhyme_27unique",
+      "stanza_structure": "free_verse",
+      "avg_syllables": 9.0,
+      "prosodic_consistency": 0.24606650446066503,
+      "meter_confidence": "MeterConfidence.LOW",
+      "modern_metrics": {
+        "enjambement_count": 20,
+        "enjambement_ratio": 0.7142857142857143,
+        "semantic_density": 4.482758620689655,
+        "line_length_variation": 0.43237582450400747,
+        "prose_poetry_score": 0.2034137931034483,
+        "visual_structure_score": 0.016666666666666666,
+        "caesura_distribution": [
+          2,
+          6,
+          7,
+          11,
+          14,
+          15,
+          18,
+          19,
+          21,
+          23,
+          24,
+          26,
+          27
+        ],
+        "syntactic_parallelism": 0.19230769230769232,
+        "lexical_repetition_score": 0.18181818181818182,
+        "breath_group_length": 18.571428571428573,
+        "pause_frequency": 0.896551724137931
+      },
+      "is_free_verse": true,
+      "free_verse_confidence": 0.5599999999999999,
+      "modern_features": {
+        "enjambement_density": 0.7142857142857143,
+        "line_variation": 0.43237582450400747,
+        "prose_tendency": 0.2034137931034483,
+        "visual_complexity": 0.016666666666666666,
+        "syntactic_parallelism": 0.19230769230769232,
+        "lexical_repetition": 0.18181818181818182
+      }
+    },
+    "content": {
+      "word_frequencies": [
+        [
+          "ва",
+          8
+        ],
+        [
+          "ба",
+          5
+        ],
+        [
+          "гоҳ",
+          4
+        ],
+        [
+          "бар",
+          3
+        ],
+        [
+          "дар",
+          3
+        ],
+        [
+          "барои",
+          2
+        ],
+        [
+          "фардоҳо",
+          2
+        ],
+        [
+          "рафт",
+          2
+        ],
+        [
+          "то",
+          2
+        ],
+        [
+          "он",
+          2
+        ],
+        [
+          "садои",
+          2
+        ],
+        [
+          "замзама",
+          2
+        ],
+        [
+          "ин",
+          2
+        ],
+        [
+          "сафед",
+          2
+        ],
+        [
+          "хоб",
+          2
+        ],
+        [
+          "аз",
+          2
+        ],
+        [
+          "ҳамеша",
+          2
+        ],
+        [
+          "ё",
+          2
+        ],
+        [
+          "хоби",
+          1
+        ],
+        [
+          "шақоиқҳо",
+          1
+        ]
+      ],
+      "neologisms": [
+        "бепаранда",
+        "гандумакони",
+        "гирифтарӯҳ",
+        "гусастани",
+        "маҷзубро",
+        "мепошид",
+        "нимабоз",
+        "садоқатҳост",
+        "сояҳои",
+        "турнаҳои"
+      ],
+      "archaisms": [
+        "зеро",
+        "ки",
+        "бар"
+      ],
+      "theme_distribution": {
+        "Love": 1,
+        "Nature": 2,
+        "Homeland": 0,
+        "Religion": 0,
+        "Mysticism": 0,
+        "Philosophy": 0
+      },
+      "lexical_diversity": 0.762,
+      "stylistic_register": "modern",
+      "total_words": 130,
+      "unique_words": 99
+    },
+    "literary": {
+      "german_perspective": 2,
+      "persian_tradition": 2,
+      "tajik_elements": 1,
+      "modernist_features": 5
+    },
+    "quality_metrics": {
+      "quality_score": 0.8,
+      "reliability": "medium",
+      "warnings": [
+        "Free verse detected - prosodic analysis limited"
+      ],
+      "recommendations": [
+        "Check for textual corruption or free verse intention"
+      ],
+      "timestamp": "2026-01-18T03:09:39.723742",
+      "free_verse_analysis": {
+        "confidence": 0.5599999999999999,
+        "enjambement_score": 0.7142857142857143,
+        "prose_poetry_score": 0.2034137931034483,
+        "line_variation_score": 0.43237582450400747,
+        "assessment": "good_free_verse"
+      }
+    }
+  },
+  "tags": [
+    "meter:ṭawīl",
+    "form:free_verse",
+    "theme:love",
+    "theme:nature",
+    "register:modern",
+    "form:free_verse"
+  ]
+}
