@@ -1,0 +1,53 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+
+# Large files (if any)
+*.pdf
+*.xlsx
+!data/*.xlsx
+
+# Documentation (optional - remove if you want docs in container)
+*.md
+!README.md

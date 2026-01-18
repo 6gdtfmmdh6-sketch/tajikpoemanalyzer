@@ -1,26 +1,32 @@
-# Core dependencies
-openpyxl>=3.1.0
+# Tajik Poetry Analyzer - Dependencies
+# Core
+streamlit>=1.28.0
+pandas>=2.0.0
 numpy>=1.24.0
+openpyxl>=3.1.0
 
-# PDF and OCR support (NEW)
+# PDF and OCR
 PyPDF2>=3.0.0
 pytesseract>=0.3.10
-pdf2image>=1.16.0  # Requires poppler-utils on system
-pillow>=10.0.0
+pdf2image>=1.16.0
+Pillow>=10.0.0
 
-# Arabic/Persian text support (NEW)
+# Arabic/Persian text support
 arabic-reshaper>=3.0.0
 python-bidi>=0.4.2
 
-# Testing (optional)
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
+# API (optional)
+Flask>=3.0.0
+Flask-CORS>=4.0.0
 
-streamlit>=1.28.0
-openpyxl>=3.1.0
-pandas>=2.0.0
-numpy>=1.24.0
-pdf2image>=1.16.0
-pytesseract>=0.3.10
-Pillow>=10.0.0
-PyPDF2>=3.0.0
+# Statistics
+scipy>=1.11.0
+scikit-learn>=1.3.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.1.0
