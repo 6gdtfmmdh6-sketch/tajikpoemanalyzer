@@ -24,5 +24,10 @@ fi
 echo "Building and starting the application..."
 ./deploy.sh
 
-# Keep terminal open on error
-read -p "Press Enter to close..."
+echo ""
+echo "Application is running at http://localhost:8501"
+echo "The browser should open automatically."
+echo ""
+
+# Keep terminal open
+read -p "Press Enter to close this window..."

@@ -1,5 +1,4 @@
 # Tajik Poetry Analyzer - Docker Compose
-# Note: 'version' attribute removed (obsolete in modern Docker Compose)
 
 services:
   tajik-analyzer:
@@ -12,6 +11,9 @@ services:
       - ./data:/app/data
       - ./exports:/app/exports
       - ./uploads:/app/uploads
+      # Corpus data (persistent)
+      - ./tajik_corpus:/app/tajik_corpus
+      - ./tajik_poetry_library:/app/tajik_poetry_library
     environment:
       - TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
       - PYTHONPATH=/app
