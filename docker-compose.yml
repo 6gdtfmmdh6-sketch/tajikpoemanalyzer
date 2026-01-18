@@ -1,0 +1,25 @@
+# Tajik Poetry Analyzer - Docker Compose
+# Note: 'version' attribute removed (obsolete in modern Docker Compose)
+
+services:
+  tajik-analyzer:
+    build: .
+    container_name: tajik-poetry-analyzer
+    ports:
+      - "8501:8501"
+    volumes:
+      # Persist data and exports
+      - ./data:/app/data
+      - ./exports:/app/exports
+      - ./uploads:/app/uploads
+    environment:
+      - TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
