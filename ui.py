@@ -9,6 +9,8 @@ Features:
 3. Modern verse metrics
 4. PDF and OCR support
 5. Scientific quality validation
+
+FIXED: Proper session_state handling for buttons and downloads
 """
 
 import streamlit as st
@@ -40,8 +42,8 @@ try:
         EnhancedPoemSplitter,
         QualityValidator,
         ExcelReporter,
-        RadifAnalysis,  # NEW: Radīf analysis dataclass
-        EnhancedRadifDetector  # NEW: Radīf detector
+        RadifAnalysis,
+        EnhancedRadifDetector
     )
     ANALYZER_AVAILABLE = True
     logger.info("Analyzer loaded successfully")
@@ -49,7 +51,7 @@ except ImportError as e:
     logger.error(f"Analyzer not available: {e}")
     ANALYZER_AVAILABLE = False
 
-# NEW: Import Corpus Manager
+# Import Corpus Manager
 try:
     from corpus_manager import TajikCorpusManager
     CORPUS_MANAGER_AVAILABLE = True
@@ -61,7 +63,7 @@ except ImportError as e:
 try:
     from pdf_handler import read_file_with_pdf_support
 except ImportError:
-    st.error("Error: Could not import pdf_handler. Please ensure pdf_handler.py is in the same directory.")
+    st.error("Error: Could not import pdf_handler.")
     st.stop()
 
 # Page configuration
@@ -77,13 +79,6 @@ st.markdown("""
     .main {max-width: 1200px; margin: 0 auto;}
     h1 {text-align: center; color: #2c3e50;}
     .stButton>button {width: 100%;}
-    .analyzer-badge {
-        background-color: #28a745;
-        color: white;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 0.8em;
-    }
     .free-verse-badge {
         background-color: #ff6b6b;
         color: white;
@@ -98,91 +93,35 @@ st.markdown("""
         border-radius: 10px;
         font-size: 0.8em;
     }
-    .radif-badge {
-        background-color: #9b59b6;
-        color: white;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 0.8em;
-    }
-    .radif-highlight {
-        background-color: #f0e6f6;
-        padding: 4px 8px;
-        border-left: 3px solid #9b59b6;
-        margin: 5px 0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 
 # -------------------------------------------------------------------
-# Configuration
+# Session State Initialization
 # -------------------------------------------------------------------
-class TajikCyrillicConfig(AnalysisConfig):
-    """Configuration specific to Tajik Cyrillic poetry"""
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.tajik_cyrillic_alphabet = set(
-            'АБВГҒДЕЁЖЗИӢЙКҚЛМНОПРСТУӮФХҲЧҶШЪЭЮЯ'
-            'абвгғдеёжзиӣйкқлмнопрстуӯфхҳчҷшъэюя'
-            '0123456789 .,!?;:-–—()[]{}"\'«»'
-        )
-        self.min_poem_lines = 3
-        self.max_poem_lines = 100
-
-
-class UIPoemSplitter:
-    """Poem splitter for UI"""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(f"{__name__}.UIPoemSplitter")
-        
-    def get_split_suggestions(self, text: str) -> List[int]:
-        """Returns line indices where a new poem is likely to start"""
-        lines = text.split('\n')
-        suggestions = []
-        
-        for i, line in enumerate(lines):
-            score = 0
-            
-            if self._looks_like_title(line):
-                score += 2
-            
-            if i > 0 and not lines[i-1].strip() and len(line.strip()) > 0:
-                score += 1.5
-            
-            if re.match(r'^[\*\-=]{3,}$', line.strip()):
-                suggestions.append(max(0, i-1))
-                continue
-                
-            if re.match(r'^\s*[\d]+[\.\)]\s*[A-ZА-Я]', line):
-                score += 1
-            
-            if score >= 1.5:
-                suggestions.append(i)
-        
-        if suggestions:
-            filtered = [suggestions[0]]
-            for s in suggestions[1:]:
-                if s - filtered[-1] > 3:
-                    filtered.append(s)
-            suggestions = filtered
-        
-        return suggestions
-
-    def _looks_like_title(self, line: str) -> bool:
-        """Simple heuristic to recognize title lines"""
-        line = line.strip()
-        if not line or len(line) > 150:
-            return False
-        if line.endswith(('.', '!', '?', ':', ',')):
-            return False
-        if not line[0].isupper():
-            return False
-        if line.isupper():
-            return False
-        return True
+def init_session_state():
+    """Initialize all session state variables"""
+    defaults = {
+        'splitters': [],
+        'all_lines': [],
+        'extracted_text': "",
+        'proceed_to_analysis': False,
+        'final_poems': [],
+        'analysis_mode': "Enhanced",
+        # NEW: Results storage for persistent display
+        'analysis_results': None,
+        'excel_bytes': None,
+        'excel_filename': None,
+        'analysis_completed': False,
+        # Corpus state
+        'corpus_saved': False,
+        'corpus_exported': False,
+        'corpus_stats': None,
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
 # -------------------------------------------------------------------
@@ -233,477 +172,282 @@ def split_text_at_indices(text: str, split_indices: List[int]) -> List[str]:
     return poems
 
 
+class UIPoemSplitter:
+    """Poem splitter for UI"""
+    
+    def get_split_suggestions(self, text: str) -> List[int]:
+        """Returns line indices where a new poem is likely to start"""
+        lines = text.split('\n')
+        suggestions = []
+        
+        for i, line in enumerate(lines):
+            score = 0
+            
+            if self._looks_like_title(line):
+                score += 2
+            
+            if i > 0 and not lines[i-1].strip() and len(line.strip()) > 0:
+                score += 1.5
+            
+            if re.match(r'^[\*\-=]{3,}$', line.strip()):
+                suggestions.append(max(0, i-1))
+                continue
+                
+            if re.match(r'^\s*[\d]+[\.\)]\s*[A-ZА-Я]', line):
+                score += 1
+            
+            if score >= 1.5:
+                suggestions.append(i)
+        
+        if suggestions:
+            filtered = [suggestions[0]]
+            for s in suggestions[1:]:
+                if s - filtered[-1] > 3:
+                    filtered.append(s)
+            suggestions = filtered
+        
+        return suggestions
+
+    def _looks_like_title(self, line: str) -> bool:
+        """Simple heuristic to recognize title lines"""
+        line = line.strip()
+        if not line or len(line) > 150:
+            return False
+        if line.endswith(('.', '!', '?', ':', ',')):
+            return False
+        if not line[0].isupper():
+            return False
+        if line.isupper():
+            return False
+        return True
+
+
+# -------------------------------------------------------------------
+# Display Functions
+# -------------------------------------------------------------------
 def display_classical_results(analysis, poem_num: int, poem_text: str):
     """Display classical analysis results"""
     structural = analysis.structural
     content = analysis.content
     validation = analysis.quality_metrics
     
-    with st.expander(f"Poem {poem_num} - Classical Analysis - {content.total_words} words", expanded=True):
-        # Content
-        st.subheader("Content")
+    with st.expander(f"Poem {poem_num} - {content.total_words} words", expanded=False):
         st.text(poem_text[:500] + "..." if len(poem_text) > 500 else poem_text)
         
         st.markdown("---")
         
-        # ʿArūḍ Meter Analysis
-        st.subheader("ʿArūḍ Meter Analysis")
         col1, col2, col3 = st.columns(3)
-        
         with col1:
-            meter_name = structural.aruz_analysis.identified_meter
-            st.metric("Identified Meter", meter_name.title())
-        
+            st.metric("Meter", structural.aruz_analysis.identified_meter.title())
         with col2:
-            confidence = structural.meter_confidence.value
-            confidence_color = {
-                'high': 'green', 'medium': 'orange', 'low': 'red', 'none': 'gray'
-            }.get(confidence, 'gray')
-            st.metric("Confidence", f"{confidence.title()}")
-        
+            st.metric("Confidence", structural.meter_confidence.value.title())
         with col3:
-            prosodic = structural.prosodic_consistency
-            st.metric("Prosodic Consistency", f"{prosodic:.1%}")
+            st.metric("Lines", structural.lines)
         
-        # Pattern display
-        if structural.aruz_analysis.pattern_match:
-            st.write(f"**Pattern:** `{structural.aruz_analysis.pattern_match}`")
-            if structural.aruz_analysis.variations_detected:
-                st.write(f"**Variations:** {', '.join(structural.aruz_analysis.variations_detected)}")
-        
-        st.markdown("---")
-        
-        # Structural Analysis
-        st.subheader("Structural Analysis")
         col1, col2 = st.columns(2)
-        
         with col1:
-            st.write(f"**Lines:** {structural.lines}")
-            st.write(f"**Average Syllables per Line:** {structural.avg_syllables:.1f}")
-            st.write(f"**Stanza Form:** {structural.stanza_structure}")
-        
-        with col2:
+            st.write(f"**Avg Syllables/Line:** {structural.avg_syllables:.1f}")
             st.write(f"**Rhyme Pattern:** {structural.rhyme_pattern}")
-        
-        st.markdown("---")
-        
-        # Content Analysis
-        st.subheader("Content Analysis")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Total Words", content.total_words)
-            st.metric("Unique Words", content.unique_words)
-        
         with col2:
-            st.metric("Lexical Diversity", f"{content.lexical_diversity:.1%}")
-            st.metric("Register", content.stylistic_register.title())
+            st.write(f"**Lexical Diversity:** {content.lexical_diversity:.1%}")
+            st.write(f"**Neologisms:** {len(content.neologisms)}")
         
-        with col3:
-            st.metric("Neologisms", len(content.neologisms))
-            st.metric("Archaisms", len(content.archaisms))
-        
-        # Word Frequencies
         if content.word_frequencies:
-            st.write("**Top Words:**")
-            top_words = ", ".join([f"{w}({c})" for w, c in content.word_frequencies[:10]])
-            st.write(top_words)
-        
-        # Neologisms
-        if content.neologisms:
-            st.write(f"**Neologisms:** {', '.join(content.neologisms[:10])}")
-        
-        # Archaisms
-        if content.archaisms:
-            st.write(f"**Archaisms:** {', '.join(content.archaisms)}")
-        
-        # Themes
-        active_themes = [k for k, v in content.theme_distribution.items() if v > 0]
-        if active_themes:
-            st.write(f"**Themes:** {', '.join(active_themes)}")
-        
-        st.markdown("---")
-        
-        # Rhyme Analysis with Radīf Detection
-        st.subheader("Rhyme Analysis (Qāfiyeh/Radīf)")
-        
-        # Check for global Radīf
-        radif_values = [r.radif for r in structural.rhyme_scheme if r.radif]
-        if radif_values and len(set(radif_values)) == 1:
-            global_radif = radif_values[0]
-            st.success(f"U0001F501 **Global Radīf Detected:** `{global_radif}` (appears in {len(radif_values)}/{len(structural.rhyme_scheme)} lines)")
-            st.info("Meter analysis was performed on lines with Radīf removed for accuracy.")
-        
-        if structural.rhyme_scheme:
-            for i, rhyme in enumerate(structural.rhyme_scheme[:5]):
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.write(f"**Line {i+1}**")
-                with col2:
-                    st.write(f"Qāfiyeh: `{rhyme.qafiyeh}`")
-                with col3:
-                    st.write(f"Radīf: `{rhyme.radif or '—'}`")
-                with col4:
-                    st.write(f"Type: {rhyme.rhyme_type}")
-            
-            if len(structural.rhyme_scheme) > 5:
-                st.caption(f"... and {len(structural.rhyme_scheme) - 5} more lines")
-        
-        st.markdown("---")
-        
-        # Quality Validation
-        st.subheader("Quality Validation")
-        
-        quality_score = validation.get('quality_score', 0)
-        reliability = validation.get('reliability', 'unknown')
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Quality Score", f"{quality_score:.0%}")
-        with col2:
-            reliability_color = {'high': 'green', 'medium': 'orange', 'low': 'red'}.get(reliability, 'gray')
-            st.metric("Reliability", reliability.title())
-        
-        warnings = validation.get('warnings', [])
-        if warnings:
-            st.warning("**Warnings:**")
-            for w in warnings:
-                st.write(f"{w}")
-        
-        recommendations = validation.get('recommendations', [])
-        if recommendations:
-            st.info("**Recommendations:**")
-            for r in recommendations:
-                st.write(f"{r}")
+            st.write("**Top Words:** " + ", ".join([f"{w}({c})" for w, c in content.word_frequencies[:5]]))
 
 
 def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: int, poem_text: str):
-    """Display enhanced analysis results with free verse detection"""
+    """Display enhanced analysis results"""
     structural = analysis.structural
     content = analysis.content
-    validation = analysis.quality_metrics
     
-    # Create title
-    title = f"Poem {poem_num} - Enhanced Analysis - {content.total_words} words"
+    badge = "Free Verse" if structural.is_free_verse else "Classical"
     
-    with st.expander(title, expanded=True):
-        # Display badge inside expander
-        if structural.is_free_verse:
-            st.markdown('<span class="free-verse-badge">Free Verse Detected</span>', unsafe_allow_html=True)
-        else:
-            st.markdown('<span class="classical-badge">Classical Form</span>', unsafe_allow_html=True)
-        
-        # Content
-        st.subheader("Content")
-        # Content
-        st.subheader("Content")
+    with st.expander(f"Poem {poem_num} - {badge} - {content.total_words} words", expanded=False):
         st.text(poem_text[:500] + "..." if len(poem_text) > 500 else poem_text)
         
         st.markdown("---")
         
-        # Analysis Summary
-        st.subheader("Analysis Summary")
-        
         col1, col2, col3 = st.columns(3)
-        
         with col1:
             if structural.is_free_verse:
                 st.metric("Form", "Free Verse")
-                st.metric("Free Verse Confidence", f"{structural.free_verse_confidence:.0%}")
             else:
-                meter_name = structural.aruz_analysis.identified_meter
-                st.metric("Identified Meter", meter_name.title())
-        
+                st.metric("Meter", structural.aruz_analysis.identified_meter.title())
         with col2:
-            confidence = structural.meter_confidence.value
-            st.metric("Confidence", confidence.title())
-            prosodic = structural.prosodic_consistency
-            st.metric("Prosodic Consistency", f"{prosodic:.1%}")
-        
+            st.metric("Confidence", structural.meter_confidence.value.title())
         with col3:
             st.metric("Lines", structural.lines)
-            st.metric("Average Syllables", f"{structural.avg_syllables:.1f}")
         
-        st.markdown("---")
-        
-        # Free Verse Analysis (if applicable)
         if structural.is_free_verse and structural.modern_metrics:
-            st.subheader("Modern Verse Analysis")
-            
             col1, col2 = st.columns(2)
-            
             with col1:
-                st.metric("Enjambement Ratio", f"{structural.modern_metrics.enjambement_ratio:.1%}")
-                st.metric("Line Variation", f"{structural.modern_metrics.line_length_variation:.2f}")
-                st.metric("Prose Tendency", f"{structural.modern_metrics.prose_poetry_score:.1%}")
-            
+                st.write(f"**Enjambement:** {structural.modern_metrics.enjambement_ratio:.1%}")
+                st.write(f"**Line Variation:** {structural.modern_metrics.line_length_variation:.2f}")
             with col2:
-                st.metric("Visual Complexity", f"{structural.modern_metrics.visual_structure_score:.1%}")
-                st.metric("Syntactic Parallelism", f"{structural.modern_metrics.syntactic_parallelism:.1%}")
-                st.metric("Lexical Repetition", f"{structural.modern_metrics.lexical_repetition_score:.1%}")
-            
-            # Free verse assessment
-            if "free_verse_analysis" in validation:
-                fv_assessment = validation["free_verse_analysis"].get("assessment", "")
-                if fv_assessment:
-                    assessment_display = fv_assessment.replace('_', ' ').title()
-                    st.info(f"**Free Verse Assessment:** {assessment_display}")
-            
-            st.markdown("---")
-        
-        # Classical Metrics (always shown)
-        st.subheader("Classical Metrics")
+                st.write(f"**Prose Score:** {structural.modern_metrics.prose_poetry_score:.1%}")
         
         col1, col2 = st.columns(2)
-        
         with col1:
-            st.write(f"**Stanza Form:** {structural.stanza_structure}")
+            st.write(f"**Avg Syllables/Line:** {structural.avg_syllables:.1f}")
             st.write(f"**Rhyme Pattern:** {structural.rhyme_pattern}")
-            if structural.aruz_analysis.pattern_match:
-                st.write(f"**Meter Pattern:** `{structural.aruz_analysis.pattern_match}`")
-        
         with col2:
-            st.write(f"**Total Syllables:** {sum(structural.syllables_per_line)}")
-            st.write(f"**Syllables per Line:** {', '.join(map(str, structural.syllables_per_line))}")
-            if structural.aruz_analysis.variations_detected:
-                st.write(f"**Meter Variations:** {', '.join(structural.aruz_analysis.variations_detected)}")
-        
-        st.markdown("---")
-        
-        # Rhyme Analysis with Radīf Detection (NEW)
-        st.subheader("Rhyme Analysis (Qāfiyeh/Radīf)")
-        
-        # Check for global Radīf
-        radif_values = [r.radif for r in structural.rhyme_scheme if r.radif]
-        if radif_values and len(set(radif_values)) == 1:
-            global_radif = radif_values[0]
-            st.success(f"U0001f501 **Global Radīf Detected:** `{global_radif}` (appears in {len(radif_values)}/{len(structural.rhyme_scheme)} lines)")
-            st.info("Meter analysis was performed on lines with Radīf removed for accuracy.")
-        
-        if structural.rhyme_scheme:
-            for i, rhyme in enumerate(structural.rhyme_scheme[:5]):
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.write(f"**Line {i+1}**")
-                with col2:
-                    st.write(f"Qāfiyeh: `{rhyme.qafiyeh}`")
-                with col3:
-                    st.write(f"Radīf: `{rhyme.radif or '—'}`")
-                with col4:
-                    st.write(f"Type: {rhyme.rhyme_type}")
-            
-            if len(structural.rhyme_scheme) > 5:
-                st.caption(f"... and {len(structural.rhyme_scheme) - 5} more lines")
-        
-        st.markdown("---")
-        
-        # Content Analysis
-        st.subheader("Content Analysis")
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Total Words", content.total_words)
-            st.metric("Unique Words", content.unique_words)
-        
-        with col2:
-            st.metric("Lexical Diversity", f"{content.lexical_diversity:.1%}")
-            st.metric("Stylistic Register", content.stylistic_register.title())
-        
-        with col3:
-            st.metric("Neologisms", len(content.neologisms))
-            st.metric("Archaisms", len(content.archaisms))
-        
-        # Word Frequencies
-        if content.word_frequencies:
-            st.write("**Top 10 Words:**")
-            top_words = ", ".join([f"{w}({c})" for w, c in content.word_frequencies[:10]])
-            st.write(top_words)
-        
-        # Themes
-        active_themes = [k for k, v in content.theme_distribution.items() if v > 0]
-        if active_themes:
-            st.write(f"**Themes:** {', '.join(active_themes)}")
-        
-        st.markdown("---")
-        
-        # Quality Validation
-        st.subheader("Quality Validation")
-        
-        quality_score = validation.get('quality_score', 0)
-        reliability = validation.get('reliability', 'unknown')
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Quality Score", f"{quality_score:.0%}")
-        with col2:
-            st.metric("Reliability", reliability.title())
-        
-        warnings = validation.get('warnings', [])
-        if warnings:
-            st.warning("**Warnings:**")
-            for w in warnings:
-                st.write(f"{w}")
-        
-        recommendations = validation.get('recommendations', [])
-        if recommendations:
-            st.info("**Recommendations:**")
-            for r in recommendations:
-                st.write(f"{r}")
+            st.write(f"**Lexical Diversity:** {content.lexical_diversity:.1%}")
+            st.write(f"**Neologisms:** {len(content.neologisms)}")
 
 
-# -------------------------------------------------------------------
-# Corpus Management Section
-# -------------------------------------------------------------------
-def display_corpus_section(all_results: List[Dict[str, Any]]):
-    """Display Corpus Management section in UI"""
-    st.markdown("---")
-    st.header("📚 Corpus Management")
+def run_analysis(poems: List[str], analysis_mode: str) -> List[Dict]:
+    """Run analysis on poems and return results"""
+    if analysis_mode == "Classical (ʿArūḍ only)":
+        analyzer = load_classical_analyzer()
+    else:
+        analyzer = load_enhanced_analyzer()
     
-    if not CORPUS_MANAGER_AVAILABLE:
-        st.warning("Corpus Manager is not available. Please ensure `corpus_manager.py` is in the same directory.")
-        return
+    all_results = []
     
-    # Initialize Corpus Manager
-    corpus_manager = TajikCorpusManager()
+    for i, poem_text in enumerate(poems):
+        try:
+            analysis = analyzer.analyze_poem(poem_text)
+            mode = 'classical' if analysis_mode == "Classical (ʿArūḍ only)" else 'enhanced'
+            all_results.append({
+                'poem_text': poem_text,
+                'poem_num': i+1,
+                'analysis': analysis,
+                'success': True,
+                'mode': mode
+            })
+        except Exception as e:
+            logger.error(f"Error in poem {i+1}: {e}")
+            all_results.append({
+                'poem_text': poem_text,
+                'poem_num': i+1,
+                'error': str(e),
+                'success': False,
+                'mode': analysis_mode
+            })
     
-    st.markdown("### Contribute to the Tajik Poetry Corpus")
-    st.markdown("""
-    Your analyzed poems can contribute to the scientific corpus.
-    Contributions are stored locally and can later be exported to GitHub.
-    """)
-    
-    # User information (optional)
-    with st.expander("User Information (optional)"):
-        username = st.text_input("GitHub Username (optional)")
-        email = st.text_input("Email (optional)")
-        license_accepted = st.checkbox(
-            "I accept the CC-BY-NC-SA 4.0 license for my contribution",
-            value=True
-        )
-    
-    # Prepare contributions
-    contributions = []
+    return all_results
+
+
+def generate_excel_report(all_results: List[Dict], analysis_mode: str) -> tuple:
+    """Generate Excel report and return (bytes, filename)"""
+    excel_data = []
     for result in all_results:
-        if result.get('success', False):
-            # Create analysis_result in required format
+        if result['success']:
             first_line = result['poem_text'].split('\n')[0].strip()
             title = first_line[:50] if len(first_line) > 50 else first_line
             
-            analysis_result = {
-                "poem_id": f"P{result['poem_num']:03d}",
-                "title": title,
-                "content": result['poem_text'],
-                "analysis": result['analysis'],
-                "validation": result.get('validation', result['analysis'].quality_metrics if hasattr(result['analysis'], 'quality_metrics') else {})
-            }
+            if result['mode'] == 'classical':
+                validation = QualityValidator.validate_analysis(result['analysis'])
+            else:
+                validation = result['analysis'].quality_metrics
             
-            # User info
-            user_info = {}
-            if username:
-                user_info["username"] = username
-            if email:
-                user_info["email"] = email
-            
-            try:
-                # Prepare contribution
-                contribution = corpus_manager.prepare_contribution(
-                    analysis_result=analysis_result,
-                    raw_text=result['poem_text'],
-                    user_info=user_info if user_info else {"anonymous": True}
-                )
-                
-                # Accept license
-                if license_accepted:
-                    contribution["metadata"]["license_accepted"] = True
-                
-                contributions.append(contribution)
-                
-            except Exception as e:
-                logger.error(f"Error preparing contribution: {e}")
+            excel_data.append({
+                'poem_id': f"P{result['poem_num']:03d}",
+                'title': title,
+                'content': result['poem_text'],
+                'analysis': result['analysis'],
+                'validation': validation
+            })
     
-    if not contributions:
-        st.info("No analyzed poems available for corpus contribution.")
+    excel_reporter = ExcelReporter()
+    mode_suffix = "classical" if analysis_mode == "Classical (ʿArūḍ only)" else "enhanced"
+    excel_filename = f"tajik_poetry_{mode_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    excel_path = Path(tempfile.gettempdir()) / excel_filename
+    excel_reporter.create_report(excel_data, str(excel_path))
+    
+    with open(excel_path, 'rb') as f:
+        excel_bytes = f.read()
+    
+    return excel_bytes, excel_filename
+
+
+# -------------------------------------------------------------------
+# Corpus Section
+# -------------------------------------------------------------------
+def display_corpus_section():
+    """Display Corpus Management section"""
+    if not st.session_state.analysis_results:
         return
     
-    st.success(f"✅ {len(contributions)} poem(s) prepared for corpus contribution.")
+    st.markdown("---")
+    st.header("Corpus Management")
     
-    # Options for user
+    if not CORPUS_MANAGER_AVAILABLE:
+        st.warning("Corpus Manager not available.")
+        return
+    
+    successful_results = [r for r in st.session_state.analysis_results if r.get('success', False)]
+    if not successful_results:
+        return
+    
+    st.info(f"{len(successful_results)} poem(s) available for corpus contribution.")
+    
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("📥 Save Contributions Locally", type="primary"):
-            with st.spinner("Saving contributions..."):
-                saved_count = 0
-                for contribution in contributions:
-                    try:
-                        corpus_manager.save_contribution(contribution)
-                        saved_count += 1
-                    except Exception as e:
-                        logger.error(f"Error saving contribution: {e}")
-                st.success(f"{saved_count} contribution(s) saved!")
+        if st.button("Save to Corpus", key="corpus_save"):
+            corpus_manager = TajikCorpusManager()
+            saved = 0
+            for result in successful_results:
+                try:
+                    first_line = result['poem_text'].split('\n')[0].strip()
+                    title = first_line[:50] if len(first_line) > 50 else first_line
+                    
+                    contribution = corpus_manager.prepare_contribution(
+                        analysis_result={
+                            "poem_id": f"P{result['poem_num']:03d}",
+                            "title": title,
+                            "content": result['poem_text'],
+                            "analysis": result['analysis'],
+                            "validation": result['analysis'].quality_metrics
+                        },
+                        raw_text=result['poem_text'],
+                        user_info={"anonymous": True}
+                    )
+                    corpus_manager.save_contribution(contribution)
+                    saved += 1
+                except Exception as e:
+                    logger.error(f"Error saving: {e}")
+            st.session_state.corpus_saved = True
+            st.rerun()
     
     with col2:
-        if st.button("📤 Export for Git"):
-            with st.spinner("Exporting..."):
-                try:
-                    # First save all contributions
-                    for contribution in contributions:
-                        corpus_manager.save_contribution(contribution)
-                    
-                    export_path = corpus_manager.export_contributions_for_git()
-                    st.success(f"Export prepared: `{export_path}`")
-                    
-                    # Show Git commands
-                    git_commands = corpus_manager.generate_git_commands()
-                    with st.expander("Show Git Commands"):
-                        st.code(git_commands, language="bash")
-                except Exception as e:
-                    st.error(f"Export failed: {e}")
+        if st.button("Export for Git", key="corpus_export"):
+            corpus_manager = TajikCorpusManager()
+            try:
+                export_path = corpus_manager.export_contributions_for_git()
+                st.session_state.corpus_exported = True
+                st.session_state.export_path = str(export_path)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Export failed: {e}")
     
     with col3:
-        if st.button("📊 Corpus Statistics"):
+        if st.button("Show Statistics", key="corpus_stats"):
+            corpus_manager = TajikCorpusManager()
             try:
-                stats = corpus_manager.get_corpus_statistics()
-                
-                st.markdown("### Current Corpus Statistics")
-                col_stats1, col_stats2, col_stats3 = st.columns(3)
-                
-                with col_stats1:
-                    st.metric("Poems", stats.get("total_poems", 0))
-                    st.metric("Lines", stats.get("total_lines", 0))
-                
-                with col_stats2:
-                    st.metric("Words", stats.get("total_words", 0))
-                    st.metric("Contributors", stats.get("contributors", 0))
-                
-                with col_stats3:
-                    diversity = stats.get("lexical_diversity", 0)
-                    st.metric("Unique Words", stats.get("unique_words", 0))
-                    st.metric("Lex. Diversity", f"{diversity:.1f}%")
-                
-                # Show meter distribution
-                aruz_dist = stats.get("aruz_distribution", {})
-                if aruz_dist:
-                    st.markdown("**Meter Distribution:**")
-                    for meter, count in sorted(aruz_dist.items(), key=lambda x: -x[1])[:5]:
-                        st.write(f"- {meter}: {count}")
-                
-                # Show Radīf count
-                radif_count = stats.get("radif_count", 0)
-                if radif_count > 0:
-                    st.info(f"🔁 Poems with Radīf: {radif_count}")
-                    
+                st.session_state.corpus_stats = corpus_manager.get_corpus_statistics()
+                st.rerun()
             except Exception as e:
-                st.error(f"Error loading statistics: {e}")
+                st.error(f"Error: {e}")
     
-    # License information
-    st.markdown("---")
-    st.markdown("""
-    **License Information:**  
-    All contributions are under the [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) license.
-    By saving, you agree to this license.
-    """)
+    # Display persistent state
+    if st.session_state.corpus_saved:
+        st.success("Contributions saved!")
+    
+    if st.session_state.corpus_exported:
+        st.success(f"Export ready: {st.session_state.get('export_path', '')}")
+    
+    if st.session_state.corpus_stats:
+        stats = st.session_state.corpus_stats
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Poems", stats.get("total_poems", 0))
+        with col2:
+            st.metric("Words", stats.get("total_words", 0))
+        with col3:
+            st.metric("Unique Words", stats.get("unique_words", 0))
 
 
 # -------------------------------------------------------------------
@@ -711,72 +455,34 @@ def display_corpus_section(all_results: List[Dict[str, Any]]):
 # -------------------------------------------------------------------
 def main():
     if not ANALYZER_AVAILABLE:
-        st.error("Error: Analyzer not available. Please ensure analyzer.py is in the same directory.")
+        st.error("Analyzer not available. Ensure analyzer.py exists.")
         st.stop()
     
-    # Initialize session state
-    if 'splitters' not in st.session_state:
-        st.session_state.splitters = []
-    if 'all_lines' not in st.session_state:
-        st.session_state.all_lines = []
-    if 'extracted_text' not in st.session_state:
-        st.session_state.extracted_text = ""
-    if 'proceed_to_analysis' not in st.session_state:
-        st.session_state.proceed_to_analysis = False
-    if 'final_poems' not in st.session_state:
-        st.session_state.final_poems = []
-    if 'analysis_mode' not in st.session_state:
-        st.session_state.analysis_mode = "Enhanced"
+    init_session_state()
     
     st.title("Tajik Poetry Analyzer")
-    st.markdown("Advanced scientific analysis of Tajik poetry with classical and modern approaches")
     st.markdown("---")
 
     # Sidebar
     with st.sidebar:
         st.header("Analysis Mode")
-        
         analysis_mode = st.radio(
-            "Select analysis mode:",
+            "Select mode:",
             options=["Classical (ʿArūḍ only)", "Enhanced (with free verse detection)"],
-            index=1,
-            key="analysis_mode_selector"
+            index=1
         )
-        
         st.session_state.analysis_mode = analysis_mode
         
         st.markdown("---")
-        st.header("Features")
-        
-        if analysis_mode == "Classical (ʿArūḍ only)":
-            st.write("16 Classical ʿArūḍ Meters")
-            st.write("Qāfiyeh/Radīf Detection")
-            st.write("Prosodic Weight Calculation")
-            st.write("Classical Form Recognition")
-            st.write("Scientific Validation")
-        else:
-            st.write("Free Verse Detection")
-            st.write("Modern Verse Metrics")
-            st.write("Enjambement Analysis")
-            st.write("Line Variation Analysis")
-            st.write("Prose-Poetry Assessment")
-            st.write("All Classical Features")
-        
-        st.markdown("---")
-        st.header("Supported Classical Meters")
+        st.header("Meters")
         meters = ["ṭawīl", "basīṭ", "wāfir", "kāmil", "mutaqārib", "hazaj", 
                   "rajaz", "ramal", "sarīʿ", "munsarih", "khafīf", "muḍāriʿ",
                   "muqtaḍab", "mujtath", "mutadārik", "madīd"]
-        st.write(", ".join(meters))
+        st.caption(", ".join(meters))
 
-    # Main area
+    # File upload
     st.header("Upload File")
-
-    uploaded_file = st.file_uploader(
-        "Upload PDF or TXT file",
-        type=['pdf', 'txt'],
-        help="Supports normal and scanned PDFs"
-    )
+    uploaded_file = st.file_uploader("PDF or TXT", type=['pdf', 'txt'])
 
     if uploaded_file is not None:
         with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded_file.name).suffix) as tmp:
@@ -784,252 +490,163 @@ def main():
             tmp_path = Path(tmp.name)
 
         try:
-            with st.spinner("Extracting text from file..."):
+            # Extract text
+            with st.spinner("Extracting text..."):
                 text = read_file_with_pdf_support(tmp_path)
                 st.session_state.extracted_text = text
-                st.success(f"Text extracted: {len(text)} characters")
+                st.success(f"Extracted: {len(text)} characters")
 
-            with st.expander("Show extracted text"):
+            with st.expander("Show text"):
                 st.text_area("Content", text, height=200)
 
-            # Poem splitting section
+            # --- POEM SPLITTING ---
             if not st.session_state.proceed_to_analysis:
-                st.header("Poem Splitting")
+                st.header("Split Poems")
                 
-                split_mode = st.radio(
-                    "How do you want to split the poems?",
-                    options=["Automatic", "Manual with preview"],
-                    index=0
-                )
+                split_mode = st.radio("Method:", ["Automatic", "Manual"], index=0)
 
-                if split_mode == "Manual with preview":
+                if split_mode == "Manual":
                     if not st.session_state.all_lines or st.session_state.all_lines[0] != text.split('\n')[0]:
                         splitter = UIPoemSplitter()
                         all_lines = text.split('\n')
-                        
                         proposed = splitter.get_split_suggestions(text)
                         if not proposed:
                             proposed = [i for i, line in enumerate(all_lines) if line.strip() == '']
-                        if not proposed and len(all_lines) > 10:
-                            proposed = list(range(10, len(all_lines), 20))
-                        
                         st.session_state.splitters = proposed
                         st.session_state.all_lines = all_lines
                     
-                    col_left, col_right = st.columns([3, 1])
+                    # Display with splitters
+                    display_text = ""
+                    for i, line in enumerate(st.session_state.all_lines):
+                        if i in st.session_state.splitters:
+                            display_text += f"\n--- SPLIT ---\n"
+                        display_text += line + "\n"
+                    st.text_area("Preview", display_text, height=300)
                     
-                    with col_left:
-                        st.subheader("Text with split suggestions")
-                        display_text = ""
-                        for i, line in enumerate(st.session_state.all_lines):
-                            if i in st.session_state.splitters:
-                                display_text += f"\n--- SPLITTER (before line {i+1}) ---\n"
-                            display_text += line + "\n"
-                        st.text_area("Preview", display_text, height=400)
-                    
-                    with col_right:
-                        st.subheader("Control Splitters")
-                        
-                        selected_position = st.slider(
-                            "Line index",
-                            0,
-                            len(st.session_state.all_lines)-1,
-                            value=0 if not st.session_state.splitters else min(st.session_state.splitters)
-                        )
-                        
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            if selected_position in st.session_state.splitters:
-                                if st.button("Remove"):
-                                    st.session_state.splitters.remove(selected_position)
-                                    st.rerun()
-                            else:
-                                if st.button("Add"):
-                                    st.session_state.splitters.append(selected_position)
-                                    st.session_state.splitters.sort()
-                                    st.rerun()
-                        
-                        with col2:
-                            if st.button("Clear all"):
-                                st.session_state.splitters = []
+                    # Controls
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        pos = st.number_input("Line #", 0, len(st.session_state.all_lines)-1, 0)
+                    with col2:
+                        if st.button("Add split"):
+                            if pos not in st.session_state.splitters:
+                                st.session_state.splitters.append(pos)
+                                st.session_state.splitters.sort()
                                 st.rerun()
-                        
-                        st.markdown(f"**Splitters:** {', '.join(map(str, sorted(st.session_state.splitters)))}")
-                        
-                        if st.button("Confirm and Analyze", type="primary"):
-                            poems = split_text_at_indices(text, st.session_state.splitters)
-                            st.session_state.final_poems = poems
-                            st.session_state.proceed_to_analysis = True
-                            st.rerun()
+                    with col3:
+                        if st.button("Remove split"):
+                            if pos in st.session_state.splitters:
+                                st.session_state.splitters.remove(pos)
+                                st.rerun()
                     
-                    st.stop()
-                
+                    st.write(f"Splits at: {st.session_state.splitters}")
+                    
+                    if st.button("Confirm & Continue", type="primary"):
+                        poems = split_text_at_indices(text, st.session_state.splitters)
+                        st.session_state.final_poems = poems
+                        st.session_state.proceed_to_analysis = True
+                        st.rerun()
+                    
                 else:  # Automatic
                     poems = split_poems_auto(text)
                     st.info(f"Found {len(poems)} poems")
                     
-                    if st.button("Confirm and Analyze", type="primary"):
+                    if st.button("Confirm & Continue", type="primary"):
                         st.session_state.final_poems = poems
                         st.session_state.proceed_to_analysis = True
                         st.rerun()
-            
-            # Analysis section
+
+            # --- ANALYSIS SECTION ---
             if st.session_state.proceed_to_analysis:
                 poems = st.session_state.final_poems
                 
                 if not poems:
-                    st.warning("No poems to analyze.")
+                    st.warning("No poems found.")
                     st.session_state.proceed_to_analysis = False
                     st.rerun()
                 
                 st.header("Analysis")
-                st.info(f"Analyzing {len(poems)} poem(s) in {analysis_mode} mode...")
+                st.info(f"{len(poems)} poem(s) ready for analysis")
                 
+                # START ANALYSIS BUTTON
                 if st.button("Start Analysis", type="primary"):
-                    # Load appropriate analyzer
-                    if analysis_mode == "Classical (ʿArūḍ only)":
-                        analyzer = load_classical_analyzer()
-                    else:
-                        analyzer = load_enhanced_analyzer()
-                    
-                    progress_bar = st.progress(0)
-                    results_container = st.container()
-                    
-                    all_results = []
-                    
-                    for i, poem_text in enumerate(poems):
-                        progress_bar.progress((i + 1) / len(poems))
+                    with st.spinner("Analyzing..."):
+                        progress = st.progress(0)
                         
-                        try:
-                            if analysis_mode == "Classical (ʿArūḍ only)":
-                                analysis = analyzer.analyze_poem(poem_text)
-                                # Convert to dict for consistency
-                                all_results.append({
-                                    'poem_text': poem_text,
-                                    'poem_num': i+1,
-                                    'analysis': analysis,
-                                    'success': True,
-                                    'mode': 'classical'
-                                })
-                            else:
-                                analysis = analyzer.analyze_poem(poem_text)
-                                all_results.append({
-                                    'poem_text': poem_text,
-                                    'poem_num': i+1,
-                                    'analysis': analysis,
-                                    'success': True,
-                                    'mode': 'enhanced'
-                                })
-                        except Exception as e:
-                            logger.error(f"Error in poem {i+1}: {e}")
-                            all_results.append({
-                                'poem_text': poem_text,
-                                'poem_num': i+1,
-                                'error': str(e),
-                                'success': False,
-                                'mode': analysis_mode
-                            })
-                    
-                    progress_bar.empty()
-                    
-                    with results_container:
-                        st.markdown("---")
-                        st.header("Results")
+                        # Run analysis
+                        results = run_analysis(poems, analysis_mode)
+                        st.session_state.analysis_results = results
                         
-                        col1, col2, col3 = st.columns(3)
-                        successful = sum(1 for r in all_results if r['success'])
+                        # Generate Excel
+                        successful = [r for r in results if r['success']]
+                        if successful:
+                            try:
+                                excel_bytes, excel_filename = generate_excel_report(results, analysis_mode)
+                                st.session_state.excel_bytes = excel_bytes
+                                st.session_state.excel_filename = excel_filename
+                            except Exception as e:
+                                logger.error(f"Excel error: {e}")
                         
-                        with col1:
-                            st.metric("Total Poems", len(all_results))
-                        with col2:
-                            st.metric("Successful Analyses", successful)
-                        with col3:
-                            st.metric("Failed Analyses", len(all_results) - successful)
+                        st.session_state.analysis_completed = True
+                        progress.empty()
+                    st.rerun()
+                
+                # --- DISPLAY RESULTS (outside button block!) ---
+                if st.session_state.analysis_completed and st.session_state.analysis_results:
+                    results = st.session_state.analysis_results
+                    
+                    st.markdown("---")
+                    st.header("Results")
+                    
+                    # Summary
+                    successful = sum(1 for r in results if r['success'])
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Total", len(results))
+                    with col2:
+                        st.metric("Successful", successful)
+                    with col3:
+                        st.metric("Failed", len(results) - successful)
+                    
+                    # Download button (OUTSIDE analysis button!)
+                    if st.session_state.excel_bytes:
+                        st.download_button(
+                            label="Download Excel Report",
+                            data=st.session_state.excel_bytes,
+                            file_name=st.session_state.excel_filename,
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            type="primary"
+                        )
+                    
+                    st.markdown("---")
+                    
+                    # Individual results
+                    for result in results:
+                        if not result['success']:
+                            st.error(f"Poem {result['poem_num']}: {result['error']}")
+                            continue
                         
-                        st.markdown("---")
-                        
-                        for result in all_results:
-                            if not result['success']:
-                                st.error(f"Poem {result['poem_num']}: {result['error']}")
-                                continue
-                            
-                            if result['mode'] == 'classical':
-                                display_classical_results(
-                                    result['analysis'],
-                                    result['poem_num'],
-                                    result['poem_text']
-                                )
-                            else:
-                                display_enhanced_results(
-                                    result['analysis'],
-                                    result['poem_num'],
-                                    result['poem_text']
-                                )
+                        if result['mode'] == 'classical':
+                            display_classical_results(result['analysis'], result['poem_num'], result['poem_text'])
+                        else:
+                            display_enhanced_results(result['analysis'], result['poem_num'], result['poem_text'])
                     
-                    st.success("Analysis completed!")
+                    # Corpus section
+                    display_corpus_section()
                     
-                    # Generate Excel Report
-                    if successful > 0:
-                        st.markdown("---")
-                        st.subheader("Download Report")
-                        
-                        try:
-                            # Prepare data for ExcelReporter
-                            excel_data = []
-                            for result in all_results:
-                                if result['success']:
-                                    # Extract title from first line
-                                    first_line = result['poem_text'].split('\n')[0].strip()
-                                    title = first_line[:50] if len(first_line) > 50 else first_line
-                                    
-                                    # Get validation data
-                                    if result['mode'] == 'classical':
-                                        validation = QualityValidator.validate_analysis(result['analysis'])
-                                    else:
-                                        validation = result['analysis'].quality_metrics
-                                    
-                                    excel_data.append({
-                                        'poem_id': f"P{result['poem_num']:03d}",
-                                        'title': title,
-                                        'content': result['poem_text'],
-                                        'analysis': result['analysis'],
-                                        'validation': validation
-                                    })
-                            
-                            # Create Excel report
-                            excel_reporter = ExcelReporter()
-                            mode_suffix = "classical" if analysis_mode == "Classical (ʿArūḍ only)" else "enhanced"
-                            excel_filename = f"tajik_poetry_{mode_suffix}_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                            excel_path = Path(tempfile.gettempdir()) / excel_filename
-                            excel_reporter.create_report(excel_data, str(excel_path))
-                            
-                            # Provide download button
-                            with open(excel_path, 'rb') as f:
-                                excel_bytes = f.read()
-                            
-                            st.download_button(
-                                label="Download Excel Report",
-                                data=excel_bytes,
-                                file_name=excel_filename,
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            )
-                            
-                            st.info(f"Report contains {len(excel_data)} poems with detailed analysis.")
-                            
-                        except Exception as e:
-                            logger.error(f"Error creating Excel report: {e}")
-                            st.error(f"Could not create Excel report: {e}")
-                    
-                    # NEW: Corpus Management Section
-                    successful_results = [r for r in all_results if r.get('success', False)]
-                    if successful_results:
-                        display_corpus_section(successful_results)
-                    
-                    if st.button("Start over"):
+                    # Reset button
+                    st.markdown("---")
+                    if st.button("Start Over"):
+                        for key in ['splitters', 'all_lines', 'proceed_to_analysis', 'final_poems',
+                                   'analysis_results', 'excel_bytes', 'excel_filename', 
+                                   'analysis_completed', 'corpus_saved', 'corpus_exported', 'corpus_stats']:
+                            st.session_state[key] = None if 'results' in key or 'bytes' in key or 'stats' in key else ([] if 'list' in str(type(st.session_state.get(key, []))) else False)
                         st.session_state.splitters = []
                         st.session_state.all_lines = []
                         st.session_state.proceed_to_analysis = False
                         st.session_state.final_poems = []
+                        st.session_state.analysis_results = None
+                        st.session_state.analysis_completed = False
                         st.rerun()
 
         finally:
@@ -1037,45 +654,28 @@ def main():
                 tmp_path.unlink()
 
     else:
-        st.info("Please upload a PDF or TXT file to begin.")
+        st.info("Upload a PDF or TXT file to begin.")
         
         st.markdown("---")
-        st.subheader("Analysis Capabilities")
-        
         col1, col2 = st.columns(2)
         
         with col1:
             st.markdown("**Classical Analysis:**")
             st.markdown("""
-            - 16 Classical ʿArūḍ Meters
-            - Qāfiyeh (rhyme) & Radīf (refrain) detection
-            - Prosodic weight calculation (Heavy/Light syllables)
-            - Phonetic transcription (IPA)
-            - Scientific quality validation
-            - PDF & OCR support for scanned documents
+            - 16 ʿArūḍ Meters
+            - Qāfiyeh/Radīf detection
+            - Prosodic analysis
+            - Quality validation
             """)
         
         with col2:
             st.markdown("**Enhanced Analysis:**")
             st.markdown("""
             - Free verse detection
-            - Modern verse metrics
+            - Modern metrics
             - Enjambement analysis
-            - Line variation assessment
-            - Prose-poetry scoring
-            - Visual structure analysis
-            - All classical features included
+            - All classical features
             """)
-        
-        st.markdown("---")
-        st.subheader("Research Applications")
-        st.markdown("""
-        - **Literary Studies**: Analysis of classical and modern Tajik poetry
-        - **Linguistics**: Phonetic and prosodic analysis of Tajik language
-        - **Digital Humanities**: Computational analysis of poetic structures
-        - **Comparative Literature**: Comparison of Persianate poetic traditions
-        - **Text Analysis**: Statistical analysis of poetic content and themes
-        """)
 
 
 if __name__ == "__main__":
