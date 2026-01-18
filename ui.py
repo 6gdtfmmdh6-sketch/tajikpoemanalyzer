@@ -386,7 +386,7 @@ def display_corpus_section():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("Save to Corpus", key="corpus_save"):
+        if st.button("Save to Corpus", key="btn_corpus_save"):
             corpus_manager = TajikCorpusManager()
             saved = 0
             for result in successful_results:
@@ -413,7 +413,7 @@ def display_corpus_section():
             st.rerun()
     
     with col2:
-        if st.button("Export for Git", key="corpus_export"):
+        if st.button("Export for Git", key="btn_corpus_export"):
             corpus_manager = TajikCorpusManager()
             try:
                 export_path = corpus_manager.export_contributions_for_git()
@@ -424,7 +424,7 @@ def display_corpus_section():
                 st.error(f"Export failed: {e}")
     
     with col3:
-        if st.button("Show Statistics", key="corpus_stats"):
+        if st.button("Show Statistics", key="btn_show_stats"):
             corpus_manager = TajikCorpusManager()
             try:
                 st.session_state.corpus_stats = corpus_manager.get_corpus_statistics()
@@ -610,13 +610,17 @@ def main():
                     
                     # Download button (OUTSIDE analysis button!)
                     if st.session_state.excel_bytes:
+                        st.subheader("📥 Download Report")
                         st.download_button(
-                            label="Download Excel Report",
+                            label="⬇️ Download Excel Report",
                             data=st.session_state.excel_bytes,
                             file_name=st.session_state.excel_filename,
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            type="primary"
+                            type="primary",
+                            key="download_excel"
                         )
+                    else:
+                        st.warning("Excel report not available")
                     
                     st.markdown("---")
                     
