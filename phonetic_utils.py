@@ -18,7 +18,7 @@ SCIENTIFIC LIMITATIONS ACKNOWLEDGED:
 import re
 import json
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -438,14 +438,14 @@ class ProsodyValidator:
             validation["recommendations"].append("Consider different analytical approach")
 
         # Check pattern validity
-        if not re.match(r'^[U—?]+, pattern):
-        validation["warnings"].append("Invalid prosodic pattern characters")
-        validation["is_valid"] = False
+        if pattern and not re.match(r'^[U—?]+$', pattern):
+            validation["warnings"].append("Invalid prosodic pattern characters")
+            validation["is_valid"] = False
 
         # Check for known problematic patterns
-        if pattern.count('?') > len(pattern) * 0.3:
+        if pattern and pattern.count('?') > len(pattern) * 0.3:
             validation["warnings"].append("Too many uncertain syllable weights")
-        validation["confidence_assessment"] = "unreliable"
+            validation["confidence_assessment"] = "unreliable"
 
         return validation
 
