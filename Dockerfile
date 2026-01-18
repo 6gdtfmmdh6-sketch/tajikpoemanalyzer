@@ -24,8 +24,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py ./
 COPY data/ ./data/
 
+# Multi-page app structure
+COPY pages/ ./pages/
+COPY components/ ./components/
+
 # Create directories for volumes
-RUN mkdir -p /app/exports /app/uploads
+RUN mkdir -p /app/exports /app/uploads /app/tajik_corpus /app/tajik_poetry_library
 
 # Expose Streamlit port
 EXPOSE 8501
