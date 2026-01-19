@@ -104,7 +104,7 @@ def init_session_state():
         'proceed_to_analysis': False,
         'final_poems': [],
         'analysis_mode': "Enhanced",
-        # NEW: Results storage for persistent display
+        # Results storage
         'analysis_results': None,
         'excel_bytes': None,
         'excel_filename': None,
@@ -113,6 +113,9 @@ def init_session_state():
         'corpus_saved': False,
         'corpus_exported': False,
         'corpus_stats': None,
+        # NEW: File info for batch creation
+        'uploaded_filename': None,
+        'batch_metadata': {},
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -252,7 +255,7 @@ def display_classical_results(analysis, poem_num: int, poem_text: str):
 
 
 def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: int, poem_text: str):
-    """Display enhanced analysis results"""
+    """Display enhanced analysis results with all details"""
     structural = analysis.structural
     content = analysis.content
     
@@ -263,7 +266,8 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
         
         st.markdown("---")
         
-        col1, col2, col3 = st.columns(3)
+        # Basic metrics
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             if structural.is_free_verse:
                 st.metric("Form", "Free Verse")
@@ -273,22 +277,92 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
             st.metric("Confidence", structural.meter_confidence.value.title())
         with col3:
             st.metric("Lines", structural.lines)
+        with col4:
+            st.metric("Words", content.total_words)
         
+        st.markdown("---")
+        
+        # Structural Analysis
+        st.markdown("**Structural Analysis**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.write(f"Avg Syllables/Line: {structural.avg_syllables:.1f}")
+            st.write(f"Rhyme Pattern: {structural.rhyme_pattern}")
+        with col2:
+            st.write(f"Stanza Type: {structural.stanza_type if hasattr(structural, 'stanza_type') else 'N/A'}")
+            # Radif info
+            if hasattr(structural, 'radif_analysis') and structural.radif_analysis:
+                radif = structural.radif_analysis
+                if hasattr(radif, 'has_radif') and radif.has_radif:
+                    st.write(f"Radif: {radif.radif_text if hasattr(radif, 'radif_text') else 'Yes'}")
+                else:
+                    st.write("Radif: None")
+        with col3:
+            # Show syllable pattern
+            if hasattr(structural, 'syllables_per_line') and structural.syllables_per_line:
+                pattern = structural.syllables_per_line[:10]
+                st.write(f"Syllable Pattern: {pattern}{'...' if len(structural.syllables_per_line) > 10 else ''}")
+        
+        # Free Verse Metrics (if applicable)
         if structural.is_free_verse and structural.modern_metrics:
-            col1, col2 = st.columns(2)
+            st.markdown("---")
+            st.markdown("**Free Verse Metrics**")
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.write(f"**Enjambement:** {structural.modern_metrics.enjambement_ratio:.1%}")
-                st.write(f"**Line Variation:** {structural.modern_metrics.line_length_variation:.2f}")
+                st.write(f"Enjambement Ratio: {structural.modern_metrics.enjambement_ratio:.1%}")
             with col2:
-                st.write(f"**Prose Score:** {structural.modern_metrics.prose_poetry_score:.1%}")
+                st.write(f"Line Length Variation: {structural.modern_metrics.line_length_variation:.2f}")
+            with col3:
+                st.write(f"Prose Poetry Score: {structural.modern_metrics.prose_poetry_score:.1%}")
+            
+            # Free verse assessment if available
+            if hasattr(analysis, 'quality_metrics') and analysis.quality_metrics:
+                fv = getattr(analysis.quality_metrics, 'free_verse_assessment', None)
+                if fv:
+                    st.write(f"Assessment: {fv}")
         
+        # Content Analysis
+        st.markdown("---")
+        st.markdown("**Content Analysis**")
         col1, col2 = st.columns(2)
         with col1:
-            st.write(f"**Avg Syllables/Line:** {structural.avg_syllables:.1f}")
-            st.write(f"**Rhyme Pattern:** {structural.rhyme_pattern}")
+            st.write(f"Lexical Diversity: {content.lexical_diversity:.1%}")
+            st.write(f"Unique Words: {content.unique_words}")
         with col2:
-            st.write(f"**Lexical Diversity:** {content.lexical_diversity:.1%}")
-            st.write(f"**Neologisms:** {len(content.neologisms)}")
+            st.write(f"Neologisms Found: {len(content.neologisms)}")
+            if content.neologisms:
+                st.write(f"Examples: {', '.join(content.neologisms[:5])}")
+        
+        # Top words
+        if content.word_frequencies:
+            st.markdown("---")
+            st.markdown("**Top Words**")
+            top_words = content.word_frequencies[:10]
+            word_str = ", ".join([f"{w} ({c})" for w, c in top_words])
+            st.write(word_str)
+        
+        # Themes
+        if hasattr(content, 'themes') and content.themes:
+            st.write(f"Themes: {', '.join(content.themes[:5])}")
+        
+        # Quality metrics
+        if hasattr(analysis, 'quality_metrics') and analysis.quality_metrics:
+            qm = analysis.quality_metrics
+            st.markdown("---")
+            st.markdown("**Quality Metrics**")
+            col1, col2 = st.columns(2)
+            with col1:
+                if hasattr(qm, 'overall_confidence'):
+                    st.write(f"Overall Confidence: {qm.overall_confidence:.1%}")
+                if hasattr(qm, 'syllable_consistency'):
+                    st.write(f"Syllable Consistency: {qm.syllable_consistency:.1%}")
+            with col2:
+                if hasattr(qm, 'rhyme_quality'):
+                    st.write(f"Rhyme Quality: {qm.rhyme_quality:.1%}")
+                if hasattr(qm, 'warnings') and qm.warnings:
+                    st.write(f"Warnings: {len(qm.warnings)}")
+                    for w in qm.warnings[:3]:
+                        st.caption(f"- {w}")
 
 
 def run_analysis(poems: List[str], analysis_mode: str) -> List[Dict]:
@@ -324,8 +398,8 @@ def run_analysis(poems: List[str], analysis_mode: str) -> List[Dict]:
     return all_results
 
 
-def generate_excel_report(all_results: List[Dict], analysis_mode: str) -> tuple:
-    """Generate Excel report and return (bytes, filename)"""
+def generate_excel_report(all_results: List[Dict], analysis_mode: str, source_filename: str = None) -> tuple:
+    """Generate Excel report, save to exports/, and return (bytes, filename)"""
     excel_data = []
     for result in all_results:
         if result['success']:
@@ -347,26 +421,70 @@ def generate_excel_report(all_results: List[Dict], analysis_mode: str) -> tuple:
     
     excel_reporter = ExcelReporter()
     mode_suffix = "classical" if analysis_mode == "Classical (ʿArūḍ only)" else "enhanced"
-    excel_filename = f"tajik_poetry_{mode_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    excel_path = Path(tempfile.gettempdir()) / excel_filename
+    
+    # Create descriptive filename from source
+    if source_filename:
+        base_name = Path(source_filename).stem
+        base_name = re.sub(r'[^a-zA-Z0-9_-]', '_', base_name)[:30]
+    else:
+        base_name = "analysis"
+    
+    excel_filename = f"{base_name}_{mode_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    # Save to exports/ directory (persistent)
+    exports_dir = Path("./exports")
+    exports_dir.mkdir(exist_ok=True)
+    excel_path = exports_dir / excel_filename
     excel_reporter.create_report(excel_data, str(excel_path))
     
     with open(excel_path, 'rb') as f:
         excel_bytes = f.read()
     
+    logger.info(f"Excel report saved to {excel_path}")
     return excel_bytes, excel_filename
+
+
+def get_previous_exports() -> List[Dict]:
+    """Get list of previous Excel exports"""
+    exports_dir = Path("./exports")
+    if not exports_dir.exists():
+        return []
+    
+    exports = []
+    for f in sorted(exports_dir.glob("*.xlsx"), key=lambda x: x.stat().st_mtime, reverse=True):
+        try:
+            stat = f.stat()
+            exports.append({
+                'filename': f.name,
+                'path': str(f),
+                'size': stat.st_size,
+                'modified': datetime.fromtimestamp(stat.st_mtime)
+            })
+        except Exception:
+            pass
+    return exports[:10]  # Return last 10
 
 
 # -------------------------------------------------------------------
 # Corpus Section
 # -------------------------------------------------------------------
+def generate_batch_id(filename: str) -> str:
+    """Generate a batch ID from filename"""
+    import re
+    # Clean filename: remove extension, replace spaces/special chars
+    base = Path(filename).stem
+    clean = re.sub(r'[^a-zA-Z0-9_]', '_', base.lower())
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    return f"batch_{clean}_{timestamp}"
+
+
 def display_corpus_section():
-    """Display Corpus Management section"""
+    """Display Corpus Management section with metadata and batch support"""
     if not st.session_state.analysis_results:
         return
     
     st.markdown("---")
-    st.header("Corpus Management")
+    st.header("Save to Library")
     
     if not CORPUS_MANAGER_AVAILABLE:
         st.warning("Corpus Manager not available.")
@@ -376,19 +494,69 @@ def display_corpus_section():
     if not successful_results:
         return
     
-    st.info(f"{len(successful_results)} poem(s) available for corpus contribution.")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("Save to Corpus", key="btn_corpus_save"):
+    # Already saved?
+    if st.session_state.corpus_saved:
+        st.success(f"Saved {len(successful_results)} poems to library!")
+        st.info("Go to Library page to view and manage your poems.")
+        
+        # Show statistics
+        if st.button("Show Corpus Statistics", key="btn_show_stats_after"):
             corpus_manager = TajikCorpusManager()
-            saved = 0
+            stats = corpus_manager.get_corpus_statistics()
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Poems", stats.get("total_poems", 0))
+            with col2:
+                st.metric("Total Words", stats.get("total_words", 0))
+            with col3:
+                st.metric("Unique Words", stats.get("unique_words", 0))
+        return
+    
+    # Show what will be saved
+    st.info(f"{len(successful_results)} poem(s) ready to save")
+    
+    # Source file info
+    source_filename = st.session_state.get('uploaded_filename', 'unknown.txt')
+    st.write(f"**Source file:** `{source_filename}`")
+    
+    # Metadata form
+    st.markdown("### Volume Metadata (optional but recommended)")
+    st.caption("This metadata will be applied to all poems from this file.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        author = st.text_input("Author", key="corpus_author", placeholder="e.g. Dilorom Soliboeva")
+        collection = st.text_input("Collection/Volume Title", key="corpus_collection", placeholder="e.g. Tufonhoi sokit")
+    with col2:
+        year = st.number_input("Publication Year", min_value=1900, max_value=2030, value=2000, key="corpus_year")
+        publisher = st.text_input("Publisher", key="corpus_publisher", placeholder="e.g. Adib")
+    
+    st.markdown("---")
+    
+    # Save button
+    if st.button("Save All to Library", type="primary", key="btn_corpus_save"):
+        corpus_manager = TajikCorpusManager()
+        saved = 0
+        errors = []
+        
+        # Generate batch ID
+        batch_id = generate_batch_id(source_filename)
+        
+        # Prepare metadata
+        volume_metadata = {
+            'author': author if author else None,
+            'collection': collection if collection else None,
+            'year': year if year else None,
+            'publisher': publisher if publisher else None,
+        }
+        
+        with st.spinner(f"Saving {len(successful_results)} poems..."):
             for result in successful_results:
                 try:
                     first_line = result['poem_text'].split('\n')[0].strip()
                     title = first_line[:50] if len(first_line) > 50 else first_line
                     
+                    # Prepare contribution with batch info
                     contribution = corpus_manager.prepare_contribution(
                         analysis_result={
                             "poem_id": f"P{result['poem_num']:03d}",
@@ -400,49 +568,38 @@ def display_corpus_section():
                         raw_text=result['poem_text'],
                         user_info={"anonymous": True}
                     )
+                    
+                    # ADD batch info and metadata to contribution
+                    contribution['source_filename'] = source_filename
+                    contribution['upload_batch_id'] = batch_id
+                    contribution['volume_metadata'] = volume_metadata
+                    
+                    # Update metadata section too
+                    if 'metadata' in contribution:
+                        contribution['metadata']['volume_title'] = collection
+                        contribution['metadata']['volume_year'] = year
+                    
+                    # Save
                     corpus_manager.save_contribution(contribution)
                     saved += 1
+                    
                 except Exception as e:
-                    logger.error(f"Error saving: {e}")
+                    logger.error(f"Error saving poem {result['poem_num']}: {e}")
+                    errors.append(f"Poem {result['poem_num']}: {str(e)}")
+        
+        if saved > 0:
             st.session_state.corpus_saved = True
+            st.session_state.batch_metadata = {
+                'batch_id': batch_id,
+                'source_filename': source_filename,
+                'poems_saved': saved,
+                'volume_metadata': volume_metadata
+            }
             st.rerun()
-    
-    with col2:
-        if st.button("Export for Git", key="btn_corpus_export"):
-            corpus_manager = TajikCorpusManager()
-            try:
-                export_path = corpus_manager.export_contributions_for_git()
-                st.session_state.corpus_exported = True
-                st.session_state.export_path = str(export_path)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Export failed: {e}")
-    
-    with col3:
-        if st.button("Show Statistics", key="btn_show_stats"):
-            corpus_manager = TajikCorpusManager()
-            try:
-                st.session_state.corpus_stats = corpus_manager.get_corpus_statistics()
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
-    
-    # Display persistent state
-    if st.session_state.corpus_saved:
-        st.success("Contributions saved!")
-    
-    if st.session_state.corpus_exported:
-        st.success(f"Export ready: {st.session_state.get('export_path', '')}")
-    
-    if st.session_state.corpus_stats:
-        stats = st.session_state.corpus_stats
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Poems", stats.get("total_poems", 0))
-        with col2:
-            st.metric("Words", stats.get("total_words", 0))
-        with col3:
-            st.metric("Unique Words", stats.get("unique_words", 0))
+        
+        if errors:
+            for err in errors:
+                st.error(err)
 
 
 # -------------------------------------------------------------------
@@ -474,12 +631,32 @@ def main():
                   "rajaz", "ramal", "sarīʿ", "munsarih", "khafīf", "muḍāriʿ",
                   "muqtaḍab", "mujtath", "mutadārik", "madīd"]
         st.caption(", ".join(meters))
+        
+        # Previous Exports Section
+        st.markdown("---")
+        st.header("Previous Exports")
+        previous_exports = get_previous_exports()
+        if previous_exports:
+            for exp in previous_exports[:5]:
+                with open(exp['path'], 'rb') as f:
+                    st.download_button(
+                        label=f"{exp['filename'][:25]}...",
+                        data=f.read(),
+                        file_name=exp['filename'],
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"dl_{exp['filename']}"
+                    )
+        else:
+            st.caption("No previous exports")
 
     # File upload
     st.header("Upload File")
     uploaded_file = st.file_uploader("PDF or TXT", type=['pdf', 'txt'])
 
     if uploaded_file is not None:
+        # Store filename for batch creation
+        st.session_state.uploaded_filename = uploaded_file.name
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded_file.name).suffix) as tmp:
             tmp.write(uploaded_file.getvalue())
             tmp_path = Path(tmp.name)
@@ -576,7 +753,8 @@ def main():
                         successful = [r for r in results if r['success']]
                         if successful:
                             try:
-                                excel_bytes, excel_filename = generate_excel_report(results, analysis_mode)
+                                source_file = st.session_state.get('uploaded_filename', 'analysis')
+                                excel_bytes, excel_filename = generate_excel_report(results, analysis_mode, source_file)
                                 st.session_state.excel_bytes = excel_bytes
                                 st.session_state.excel_filename = excel_filename
                             except Exception as e:
@@ -605,9 +783,9 @@ def main():
                     
                     # Download button (OUTSIDE analysis button!)
                     if st.session_state.excel_bytes:
-                        st.subheader("📥 Download Report")
+                        st.subheader("Download Report")
                         st.download_button(
-                            label="⬇️ Download Excel Report",
+                            label="Download Excel Report",
                             data=st.session_state.excel_bytes,
                             file_name=st.session_state.excel_filename,
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -636,16 +814,20 @@ def main():
                     # Reset button
                     st.markdown("---")
                     if st.button("Start Over"):
-                        for key in ['splitters', 'all_lines', 'proceed_to_analysis', 'final_poems',
-                                   'analysis_results', 'excel_bytes', 'excel_filename', 
-                                   'analysis_completed', 'corpus_saved', 'corpus_exported', 'corpus_stats']:
-                            st.session_state[key] = None if 'results' in key or 'bytes' in key or 'stats' in key else ([] if 'list' in str(type(st.session_state.get(key, []))) else False)
+                        # Reset all session state
                         st.session_state.splitters = []
                         st.session_state.all_lines = []
                         st.session_state.proceed_to_analysis = False
                         st.session_state.final_poems = []
                         st.session_state.analysis_results = None
+                        st.session_state.excel_bytes = None
+                        st.session_state.excel_filename = None
                         st.session_state.analysis_completed = False
+                        st.session_state.corpus_saved = False
+                        st.session_state.corpus_exported = False
+                        st.session_state.corpus_stats = None
+                        st.session_state.uploaded_filename = None
+                        st.session_state.batch_metadata = {}
                         st.rerun()
 
         finally:

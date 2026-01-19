@@ -427,7 +427,7 @@ class AruzMeterAnalyzer:
                 pattern="U—UU—U—UU—",
                 description="فعولن مفاعيلن فعولن مفاعيلن",
                 variations=["U—UU—U—UU", "U—UU—U—U—"],
-                frequency_weight=1.5
+                frequency_weight=0.7  # Reduced: was causing false positives for free verse
             ),
             "basīṭ": AruzPattern(
                 name="basīṭ",
@@ -630,6 +630,11 @@ class AruzMeterAnalyzer:
             best_match["confidence"] = MeterConfidence.MEDIUM
         elif best_score >= 0.5:
             best_match["confidence"] = MeterConfidence.LOW
+        
+        # If confidence is too low, mark as unknown to avoid false positives
+        if best_match["confidence"] == MeterConfidence.NONE or best_match["accuracy"] < 0.45:
+            best_match["meter"] = "unknown"
+            best_match["confidence"] = MeterConfidence.NONE
 
         return best_match
 
@@ -915,6 +920,220 @@ class ModernVerseAnalyzer:
         return punctuation_count / len(lines)
 
 
+class HaikuDetector:
+    """
+    Detector for Haiku poetry (Japanese form adapted to Persian/Tajik)
+    
+    According to Encyclopaedia Iranica, Persian haiku:
+    - Generally follows the three-line pattern but DISCARDS the traditional 5-7-5 syllabic pattern
+    - Conveys emotion/mood of a moment OR moralistic/philosophical/religious message
+    - Links Japanese Buddhism with Persian mysticism/neo-Sufism
+    - Is distinct from šeʿr-e now (new poetry) or šeʿr-e kutāh (short poetry)
+    - Rarely welcomes colloquial language or slang
+    
+    Key poets who introduced haiku to Persian:
+    - Sohrab Sepehri (1928-1980)
+    - Ahmad Shamlou (1925-2000) 
+    - Mehdi Akhavan Sales (1929-1990)
+    
+    Note: This is NOT a classical ʿArūḍ form but an adopted Japanese form.
+    """
+    
+    # Persian haiku is more flexible - total syllables typically 10-20
+    MIN_TOTAL_SYLLABLES = 8
+    MAX_TOTAL_SYLLABLES = 25
+    
+    # Nature/seasonal keywords (kigo equivalents in Tajik Cyrillic)
+    # Extended with mystical/Sufi elements per Iranica
+    SEASONAL_KEYWORDS = {
+        'baħor': ['баҳор', 'гул', 'навбаҳор', 'шукуфтан', 'сабза', 'булбул', 'лола', 'сабз'],
+        'tobiston': ['офтоб', 'гармо', 'дарё', 'мева', 'ангур', 'тобистон'],
+        'tirmoh': ['барг', 'хазон', 'зард', 'тирмоҳ'],
+        'zimiston': ['барф', 'сармо', 'ях', 'замистон', 'шабнам']
+    }
+    
+    # Nature elements (kigo-like)
+    NATURE_KEYWORDS = [
+        'моҳ', 'офтоб', 'осмон', 'ситора', 'абр', 'борон', 'шабнам',  # sky
+        'дарё', 'об', 'чашма', 'дарьо', 'кӯл',  # water
+        'кӯҳ', 'санг', 'замин', 'хок',  # earth
+        'дарахт', 'гул', 'барг', 'мева', 'сабза',  # plants
+        'парранда', 'булбул', 'кабутар', 'мурғ',  # birds/animals
+        'бод', 'шаб', 'рӯз', 'субҳ', 'шом'  # time/elements
+    ]
+    
+    # Mystical/Sufi keywords (Persian haiku links Buddhism & Sufism)
+    MYSTICAL_KEYWORDS = [
+        'дил', 'рӯҳ', 'ишқ', 'жон', 'маъно', 'ҳақиқат',  # soul/love/truth
+        'сукут', 'хомӯшӣ', 'оромӣ',  # silence/peace
+        'фано', 'бақо', 'ягонагӣ',  # Sufi concepts
+        'лаҳза', 'дам', 'нафас', 'вақт',  # moment/breath/time
+        'нур', 'равшанӣ', 'зулмат'  # light/darkness
+    ]
+    
+    def __init__(self):
+        self.phonetics = PersianTajikPhonetics()
+        self.logger = logging.getLogger(f"{__name__}.HaikuDetector")
+    
+    def detect(self, poem_content: str, syllable_counts: List[int] = None) -> Dict[str, Any]:
+        """
+        Detect if a poem is a Persian/Tajik Haiku.
+        
+        Persian haiku criteria (per Iranica):
+        1. REQUIRED: Exactly 3 lines
+        2. FLEXIBLE: Total syllables ~10-20 (NOT strict 5-7-5)
+        3. WEIGHTED: Nature imagery OR mystical/philosophical content
+        4. WEIGHTED: Captures a moment or conveys a message
+        
+        Returns:
+            Dict with is_haiku, confidence, form_variant, etc.
+        """
+        lines = [line.strip() for line in poem_content.split('\n') if line.strip()]
+        
+        # REQUIRED: exactly 3 lines
+        if len(lines) != 3:
+            return self._not_haiku()
+        
+        # Calculate syllables if not provided
+        if syllable_counts is None or len(syllable_counts) != 3:
+            syllable_counts = [self._count_syllables(line) for line in lines]
+        
+        total_syllables = sum(syllable_counts)
+        
+        # Check reasonable syllable range for Persian haiku
+        if not (self.MIN_TOTAL_SYLLABLES <= total_syllables <= self.MAX_TOTAL_SYLLABLES):
+            return self._not_haiku()
+        
+        # Check for nature OR mystical elements
+        nature_elements = self._find_nature_elements(poem_content)
+        mystical_elements = self._find_mystical_elements(poem_content)
+        seasonal_elements = self._find_seasonal_elements(poem_content)
+        
+        all_elements = nature_elements + mystical_elements + seasonal_elements
+        
+        # Calculate confidence
+        confidence = self._calculate_haiku_confidence(
+            syllable_counts, all_elements, lines, nature_elements, mystical_elements
+        )
+        
+        # Determine form variant
+        form_variant = self._determine_variant(
+            syllable_counts, nature_elements, mystical_elements
+        )
+        
+        # Threshold: at least some haiku characteristics
+        if confidence < 0.4:
+            return self._not_haiku()
+        
+        self.logger.info(f"Haiku detected: {form_variant} with confidence {confidence:.0%}")
+        
+        return {
+            'is_haiku': True,
+            'confidence': confidence,
+            'syllable_pattern': syllable_counts,
+            'total_syllables': total_syllables,
+            'is_575_pattern': syllable_counts == [5, 7, 5],
+            'nature_elements': nature_elements,
+            'mystical_elements': mystical_elements,
+            'seasonal_elements': seasonal_elements,
+            'form_variant': form_variant
+        }
+    
+    def _count_syllables(self, line: str) -> int:
+        """Count syllables in a line using phonetic analysis."""
+        syllables = self.phonetics._syllabify(line)
+        return len(syllables)
+    
+    def _find_seasonal_elements(self, text: str) -> List[str]:
+        """Find seasonal keywords (kigo)."""
+        text_lower = text.lower()
+        found = []
+        
+        for season, keywords in self.SEASONAL_KEYWORDS.items():
+            for kw in keywords:
+                if kw in text_lower:
+                    found.append(f"{kw} ({season})")
+        
+        return found
+    
+    def _find_nature_elements(self, text: str) -> List[str]:
+        """Find nature keywords."""
+        text_lower = text.lower()
+        return [kw for kw in self.NATURE_KEYWORDS if kw in text_lower]
+    
+    def _find_mystical_elements(self, text: str) -> List[str]:
+        """Find mystical/Sufi keywords (Persian haiku's Buddhist-Sufi nexus)."""
+        text_lower = text.lower()
+        return [kw for kw in self.MYSTICAL_KEYWORDS if kw in text_lower]
+    
+    def _calculate_haiku_confidence(self, syllables: List[int], 
+                                    all_elements: List[str], 
+                                    lines: List[str],
+                                    nature_elements: List[str],
+                                    mystical_elements: List[str]) -> float:
+        """Calculate confidence score for Haiku classification."""
+        confidence = 0.3  # Base confidence for 3-line structure
+        
+        # Traditional 5-7-5 pattern: +0.25 (but not required per Iranica)
+        if syllables == [5, 7, 5]:
+            confidence += 0.25
+        # Close to 5-7-5: +0.1
+        elif all(abs(syllables[i] - [5, 7, 5][i]) <= 2 for i in range(3)):
+            confidence += 0.1
+        
+        # Nature elements: +0.15 per element, max +0.3
+        confidence += min(0.3, len(nature_elements) * 0.15)
+        
+        # Mystical/Sufi elements: +0.1 per element, max +0.2
+        # (Persian haiku often connects Buddhism & Sufism)
+        confidence += min(0.2, len(mystical_elements) * 0.1)
+        
+        # Seasonal elements: +0.1
+        if any('(' in e for e in all_elements):  # seasonal elements have season in parentheses
+            confidence += 0.1
+        
+        # Short lines (typical for haiku): +0.1
+        avg_words = sum(len(line.split()) for line in lines) / 3
+        if avg_words <= 5:
+            confidence += 0.1
+        
+        # Balanced line lengths: +0.05
+        if max(syllables) - min(syllables) <= 4:
+            confidence += 0.05
+        
+        return min(1.0, confidence)
+    
+    def _determine_variant(self, syllables: List[int], 
+                          nature_elements: List[str],
+                          mystical_elements: List[str]) -> str:
+        """Determine the Haiku variant."""
+        has_575 = syllables == [5, 7, 5]
+        has_nature = len(nature_elements) > 0
+        has_mystical = len(mystical_elements) > 0
+        
+        if has_575 and has_nature:
+            return 'traditional_haiku'
+        elif has_mystical and not has_nature:
+            return 'sufi_haiku'  # Persian-specific: Buddhist-Sufi connection
+        elif has_575:
+            return 'senryū'  # Japanese-style without nature
+        elif has_nature or has_mystical:
+            return 'persian_haiku'  # Free-form Persian adaptation
+        else:
+            return 'free_haiku'
+    
+    def _not_haiku(self) -> Dict[str, Any]:
+        """Return negative Haiku result."""
+        return {
+            'is_haiku': False,
+            'confidence': 0.0,
+            'syllable_pattern': [],
+            'nature_elements': [],
+            'mystical_elements': [],
+            'form_variant': None
+        }
+
+
 class FreeVerseClassifier:
     """Classifier for free verse poetry"""
 
@@ -1190,14 +1409,15 @@ class AdvancedRhymeAnalyzer:
 # =============================================================================
 
 class StructuralAnalyzer:
-    """Enhanced structural analyzer with Radīf detection"""
+    """Enhanced structural analyzer with Radīf detection and Haiku support"""
 
     def __init__(self, config: Optional[AnalysisConfig] = None):
         self.config = config or AnalysisConfig()
         self.aruz_analyzer = AruzMeterAnalyzer(self.config)
         self.rhyme_analyzer = AdvancedRhymeAnalyzer()
         self.phonetics = PersianTajikPhonetics()
-        self.radif_detector = EnhancedRadifDetector()  # NEW: Radīf detection
+        self.radif_detector = EnhancedRadifDetector()  # Radīf detection
+        self.haiku_detector = HaikuDetector()  # Haiku detection
 
     def analyze(self, poem_content: str) -> StructuralAnalysis:
         """Comprehensive structural analysis with Radīf-aware meter detection"""
@@ -1257,7 +1477,7 @@ class StructuralAnalyzer:
             })
 
         rhyme_pattern = self._generate_rhyme_pattern(rhyme_analyses, radif_text if has_radif else '')
-        stanza_structure = self._detect_stanza_structure(lines, rhyme_pattern, has_radif)
+        stanza_structure = self._detect_stanza_structure(lines, rhyme_pattern, has_radif, syllable_counts)
         avg_syllables = sum(syllable_counts) / len(syllable_counts) if syllable_counts else 0
         prosodic_consistency = self._calculate_prosodic_consistency(line_analyses)
 
@@ -1318,10 +1538,17 @@ class StructuralAnalyzer:
 
         return ''.join(pattern)
 
-    def _detect_stanza_structure(self, lines: List[str], rhyme_pattern: str, has_radif: bool = False) -> str:
-        """Detect stanza structure with Radīf awareness"""
+    def _detect_stanza_structure(self, lines: List[str], rhyme_pattern: str, has_radif: bool = False,
+                                   syllable_counts: List[int] = None) -> str:
+        """Detect stanza structure with Radīf awareness and Haiku support"""
         if len(lines) <= 2:
             return "monostich" if len(lines) == 1 else "couplet"
+        
+        # Check for Haiku (exactly 3 lines with ~5-7-5 syllables)
+        if len(lines) == 3 and syllable_counts and len(syllable_counts) == 3:
+            haiku_result = self.haiku_detector.detect('\n'.join(lines), syllable_counts)
+            if haiku_result['is_haiku']:
+                return f"haiku:{haiku_result['form_variant']}"
 
         # Poems with Radīf are often ghazals or qasidas
         if has_radif:
@@ -1618,11 +1845,19 @@ class EnhancedTajikPoemAnalyzer:
             unique_rhymes = len(set(rhyme_pattern))
             rhyme_pattern = f"free_rhyme_{unique_rhymes}unique"
         
-        # Adjust meter for free verse
+        # Adjust meter for free verse and special forms
         identified_meter = structural.aruz_analysis.identified_meter
         meter_confidence = structural.meter_confidence
         
-        if is_free_verse and identified_meter == "ṭawīl":
+        # Check if it's a Haiku
+        is_haiku = structural.stanza_structure.startswith('haiku:')
+        
+        if is_haiku:
+            # Haiku is a special non-ʿArūḍ form
+            identified_meter = "haiku"
+            meter_confidence = MeterConfidence.HIGH  # Haiku detection is reliable
+            is_free_verse = False  # Haiku is not free verse, it has a fixed form
+        elif is_free_verse and identified_meter == "ṭawīl":
             # ṭawīl is often false-positive for free verse
             identified_meter = "free_verse"
             meter_confidence = MeterConfidence.LOW

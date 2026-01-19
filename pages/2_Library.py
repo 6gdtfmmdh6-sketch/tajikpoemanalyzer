@@ -1,32 +1,26 @@
 #!/usr/bin/env python3
 """
 Library Management Page
-Manage poetry volumes with metadata
+Manage poetry volumes with metadata - simplified batch workflow
 """
 
 import streamlit as st
 import json
+import os
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Import library manager
 try:
-    from extended_corpus_manager import (
-        TajikLibraryManager,
-        VolumeMetadata,
-        Genre,
-        Period
-    )
+    from extended_corpus_manager import TajikLibraryManager, VolumeMetadata, Genre
     LIBRARY_AVAILABLE = True
 except ImportError as e:
     logger.error(f"Library manager not available: {e}")
     LIBRARY_AVAILABLE = False
 
-# Import simple corpus manager for existing contributions
 try:
     from corpus_manager import TajikCorpusManager
     CORPUS_AVAILABLE = True
@@ -35,22 +29,20 @@ except ImportError:
 
 
 def init_library_state():
-    """Initialize session state for library"""
     defaults = {
-        'lib_selected_volume': None,
-        'lib_edit_mode': False,
-        'lib_metadata_saved': False,
         'lib_contributions_loaded': False,
         'lib_contributions': [],
+        'lib_batches': {},
     }
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
 
 
-def load_existing_contributions() -> List[Dict]:
-    """Load existing contributions from simple corpus"""
+def load_existing_contributions() -> Tuple[List[Dict], Dict[str, List[Dict]]]:
+    """Load existing contributions and group them by batch."""
     contributions = []
+    batches = {}
     corpus_dir = Path("./tajik_corpus/contributions")
     
     if corpus_dir.exists():
@@ -60,19 +52,39 @@ def load_existing_contributions() -> List[Dict]:
                     data = json.load(f)
                     data['_filepath'] = str(file)
                     contributions.append(data)
+                    
+                    batch_id = data.get('upload_batch_id')
+                    source_filename = data.get('source_filename', 'Unknown')
+                    
+                    if batch_id:
+                        if batch_id not in batches:
+                            batches[batch_id] = {
+                                'poems': [],
+                                'source_filename': source_filename,
+                                'batch_id': batch_id
+                            }
+                        batches[batch_id]['poems'].append(data)
+                    else:
+                        if '_ungrouped_' not in batches:
+                            batches['_ungrouped_'] = {
+                                'poems': [],
+                                'source_filename': 'Individual poems',
+                                'batch_id': '_ungrouped_'
+                            }
+                        batches['_ungrouped_']['poems'].append(data)
+                        
             except Exception as e:
                 logger.error(f"Error loading {file}: {e}")
     
-    return contributions
+    return contributions, batches
 
 
-def save_contribution_metadata(filepath: str, metadata: Dict):
+def save_contribution_metadata(filepath: str, metadata: Dict) -> bool:
     """Update metadata in existing contribution file"""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        # Update metadata fields
         if 'volume_metadata' not in data:
             data['volume_metadata'] = {}
         
@@ -88,356 +100,346 @@ def save_contribution_metadata(filepath: str, metadata: Dict):
         return False
 
 
-def display_metadata_form(contribution: Optional[Dict] = None) -> Dict:
-    """Display metadata input form, return values"""
+def delete_batch(batch_id: str, batches: Dict) -> Tuple[int, List[str]]:
+    """Delete all poems in a batch"""
+    if batch_id not in batches:
+        return 0, [f"Batch '{batch_id}' not found"]
     
-    # Get existing values if editing
-    existing = {}
-    if contribution and 'volume_metadata' in contribution:
-        existing = contribution['volume_metadata']
+    batch = batches[batch_id]
+    deleted_count = 0
+    errors = []
     
-    st.subheader("Volume Metadata")
+    for poem in batch['poems']:
+        filepath = poem.get('_filepath')
+        if filepath and Path(filepath).exists():
+            try:
+                os.remove(filepath)
+                deleted_count += 1
+                logger.info(f"Deleted: {filepath}")
+            except Exception as e:
+                errors.append(f"Failed to delete {filepath}: {e}")
     
+    # Clean up master corpus if exists
+    master_corpus = Path("./tajik_corpus/corpus/master.json")
+    if master_corpus.exists():
+        try:
+            with open(master_corpus, 'r', encoding='utf-8') as f:
+                corpus_data = json.load(f)
+            
+            poems = corpus_data.get('poems', [])
+            corpus_data['poems'] = [
+                p for p in poems 
+                if p.get('upload_batch_id') != batch_id
+            ]
+            
+            if 'statistics' in corpus_data:
+                corpus_data['statistics']['total_poems'] = len(corpus_data['poems'])
+            
+            with open(master_corpus, 'w', encoding='utf-8') as f:
+                json.dump(corpus_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            errors.append(f"Master corpus update error: {e}")
+    
+    return deleted_count, errors
+
+
+def display_batch_selector(batches: Dict, key_prefix: str = "batch", exclude_ungrouped: bool = False) -> Optional[str]:
+    """Display batch selection dropdown"""
+    if not batches:
+        st.warning("No batches found.")
+        return None
+    
+    options = []
+    for batch_id, batch_data in batches.items():
+        if exclude_ungrouped and batch_id == '_ungrouped_':
+            continue
+        if batch_id == '_ungrouped_':
+            label = f"Individual poems ({len(batch_data['poems'])} poems)"
+        else:
+            label = f"{batch_data['source_filename']} ({len(batch_data['poems'])} poems)"
+        options.append((batch_id, label))
+    
+    if not options:
+        st.info("No batches available.")
+        return None
+    
+    options.sort(key=lambda x: (x[0] == '_ungrouped_', x[1]))
+    
+    selected = st.selectbox(
+        "Select Batch",
+        options=[opt[0] for opt in options],
+        format_func=lambda x: next(opt[1] for opt in options if opt[0] == x),
+        key=f"{key_prefix}_selector"
+    )
+    
+    return selected
+
+
+def display_batch_info(batch_data: Dict):
+    """Display information about a batch"""
     col1, col2 = st.columns(2)
-    
     with col1:
-        author = st.text_input(
-            "Author",
-            value=existing.get('author', ''),
-            key="meta_author",
-            placeholder="e.g. Dilorom Soliboeva"
-        )
-        
-        collection = st.text_input(
-            "Collection / Volume Title",
-            value=existing.get('collection', ''),
-            key="meta_collection",
-            placeholder="e.g. Tufonhoi sokit"
-        )
-    
+        st.write(f"**Source:** `{batch_data['source_filename']}`")
+        st.write(f"**Poems:** {len(batch_data['poems'])}")
     with col2:
-        year = st.number_input(
-            "Publication Year",
-            min_value=1900,
-            max_value=2030,
-            value=existing.get('year', 2000),
-            key="meta_year"
-        )
-        
-        publisher = st.text_input(
-            "Publisher",
-            value=existing.get('publisher', ''),
-            key="meta_publisher",
-            placeholder="e.g. Adib"
-        )
+        # Show existing metadata if any
+        first_poem = batch_data['poems'][0] if batch_data['poems'] else {}
+        vol_meta = first_poem.get('volume_metadata', {})
+        if vol_meta.get('author') or vol_meta.get('collection'):
+            st.write(f"**Author:** {vol_meta.get('author', '-')}")
+            st.write(f"**Collection:** {vol_meta.get('collection', '-')}")
     
-    return {
-        'author': author,
-        'collection': collection,
-        'year': year,
-        'publisher': publisher
-    }
+    with st.expander("Preview poems"):
+        for poem in batch_data['poems'][:10]:
+            st.write(f"- {poem.get('title', 'Untitled')}")
+        if len(batch_data['poems']) > 10:
+            st.caption(f"... and {len(batch_data['poems']) - 10} more")
 
 
-def display_contributions_table(contributions: List[Dict]):
-    """Display table of existing contributions"""
-    
+def display_browse_tab(contributions: List[Dict], batches: Dict):
+    """Browse tab - overview of all batches"""
     if not contributions:
-        st.info("No contributions found. Use the Analyze page to add poems.")
+        st.info("No poems in library yet. Use the Analyze page to add poems.")
         return
     
-    st.subheader(f"Existing Contributions ({len(contributions)})")
+    st.subheader(f"Library Overview ({len(contributions)} poems)")
     
-    # Group by potential volumes (same metadata)
-    groups = {}
-    ungrouped = []
+    # Metrics
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        real_batches = len([b for b in batches if b != '_ungrouped_'])
+        st.metric("Batches", real_batches)
+    with col2:
+        with_meta = sum(1 for c in contributions if c.get('volume_metadata', {}).get('author'))
+        st.metric("With Metadata", with_meta)
+    with col3:
+        ungrouped = len(batches.get('_ungrouped_', {}).get('poems', []))
+        st.metric("Ungrouped", ungrouped)
     
-    for contrib in contributions:
-        vol_meta = contrib.get('volume_metadata', {})
-        if vol_meta.get('collection'):
-            key = f"{vol_meta.get('author', 'Unknown')} - {vol_meta.get('collection')}"
-            if key not in groups:
-                groups[key] = []
-            groups[key].append(contrib)
+    st.markdown("---")
+    
+    # List batches
+    for batch_id, batch_data in sorted(batches.items(), key=lambda x: x[0] == '_ungrouped_'):
+        if batch_id == '_ungrouped_':
+            title = "Individual Poems (no batch)"
         else:
-            ungrouped.append(contrib)
-    
-    # Display grouped
-    if groups:
-        st.markdown("### Volumes with Metadata")
-        for group_name, items in groups.items():
-            with st.expander(f"{group_name} ({len(items)} poems)"):
-                vol_meta = items[0].get('volume_metadata', {})
+            title = batch_data['source_filename']
+        
+        first_poem = batch_data['poems'][0] if batch_data['poems'] else {}
+        vol_meta = first_poem.get('volume_metadata', {})
+        has_metadata = vol_meta.get('author') or vol_meta.get('collection')
+        status = "[complete]" if has_metadata else "[needs metadata]"
+        
+        with st.expander(f"{title} ({len(batch_data['poems'])} poems) {status}"):
+            if batch_id != '_ungrouped_':
+                st.caption(f"Batch ID: `{batch_id}`")
+            
+            if has_metadata:
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
                     st.write(f"**Author:** {vol_meta.get('author', '-')}")
                 with col2:
-                    st.write(f"**Year:** {vol_meta.get('year', '-')}")
+                    st.write(f"**Collection:** {vol_meta.get('collection', '-')}")
                 with col3:
-                    st.write(f"**Publisher:** {vol_meta.get('publisher', '-')}")
+                    st.write(f"**Year:** {vol_meta.get('year', '-')}")
                 with col4:
-                    if st.button("Edit", key=f"edit_{group_name}"):
-                        st.session_state.lib_selected_volume = group_name
-                        st.session_state.lib_edit_mode = True
-                        st.rerun()
-    
-    # Display ungrouped
-    if ungrouped:
-        st.markdown("### Poems Without Volume Metadata")
-        st.warning(f"{len(ungrouped)} poems need metadata assignment")
-        
-        # Show table
-        table_data = []
-        for contrib in ungrouped[:20]:  # Limit display
-            table_data.append({
-                'ID': contrib.get('poem_id', '-'),
-                'Title': contrib.get('title', '-')[:40],
-                'Date': contrib.get('metadata', {}).get('submission_date', '-')[:10],
-                'File': Path(contrib.get('_filepath', '')).name
-            })
-        
-        st.dataframe(table_data, use_container_width=True)
-        
-        if len(ungrouped) > 20:
-            st.caption(f"Showing 20 of {len(ungrouped)} poems")
+                    st.write(f"**Publisher:** {vol_meta.get('publisher', '-')}")
+            
+            st.markdown("**Poems:**")
+            for poem in batch_data['poems'][:15]:
+                st.write(f"- {poem.get('title', 'Untitled')}")
+            if len(batch_data['poems']) > 15:
+                st.caption(f"... and {len(batch_data['poems']) - 15} more")
 
 
-def display_bulk_metadata_form(contributions: List[Dict]):
-    """Form to apply metadata to multiple contributions at once"""
+def display_edit_metadata_tab(batches: Dict):
+    """Edit metadata for a batch"""
+    st.subheader("Edit Batch Metadata")
+    st.info("Update or add metadata for an existing batch.")
     
-    st.subheader("Apply Metadata to Multiple Poems")
-    st.info("This will apply the same metadata to all selected poems.")
+    selected_batch_id = display_batch_selector(batches, key_prefix="edit")
     
-    # Get ungrouped contributions
-    ungrouped = [c for c in contributions if not c.get('volume_metadata', {}).get('collection')]
-    
-    if not ungrouped:
-        st.success("All poems have metadata assigned.")
+    if not selected_batch_id:
         return
     
-    # Selection
-    st.write(f"**{len(ungrouped)} poems without metadata**")
+    batch_data = batches[selected_batch_id]
     
-    apply_to_all = st.checkbox("Apply to all poems without metadata", value=True)
+    st.markdown("---")
+    display_batch_info(batch_data)
+    st.markdown("---")
     
-    if not apply_to_all:
-        # Let user select specific poems
-        selected_ids = st.multiselect(
-            "Select poems",
-            options=[c.get('poem_id', c.get('title', 'Unknown')) for c in ungrouped],
-            default=[]
-        )
-    else:
-        selected_ids = None  # Means all
+    # Get existing metadata
+    first_poem = batch_data['poems'][0] if batch_data['poems'] else {}
+    existing = first_poem.get('volume_metadata', {})
+    
+    st.markdown("### Metadata")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        author = st.text_input("Author", value=existing.get('author', '') or '', key="edit_author")
+        collection = st.text_input("Collection/Volume", value=existing.get('collection', '') or '', key="edit_collection")
+    with col2:
+        year = st.number_input("Year", 1900, 2030, value=existing.get('year') or 2000, key="edit_year")
+        publisher = st.text_input("Publisher", value=existing.get('publisher', '') or '', key="edit_publisher")
     
     st.markdown("---")
     
-    # Metadata form
-    metadata = display_metadata_form()
-    
-    st.markdown("---")
-    
-    # Apply button
-    if st.button("Apply Metadata", type="primary", key="btn_apply_metadata"):
-        if not metadata['author'] or not metadata['collection']:
-            st.error("Author and Collection are required.")
-            return
+    if st.button("Save Metadata", type="primary", key="btn_save_metadata"):
+        metadata = {
+            'author': author if author else None,
+            'collection': collection if collection else None,
+            'year': year,
+            'publisher': publisher if publisher else None,
+        }
         
-        # Determine which contributions to update
-        to_update = ungrouped if apply_to_all else [
-            c for c in ungrouped 
-            if c.get('poem_id', c.get('title')) in selected_ids
-        ]
-        
-        # Update each contribution
         success_count = 0
-        for contrib in to_update:
-            filepath = contrib.get('_filepath')
+        for poem in batch_data['poems']:
+            filepath = poem.get('_filepath')
             if filepath and save_contribution_metadata(filepath, metadata):
                 success_count += 1
         
         if success_count > 0:
-            st.session_state.lib_metadata_saved = True
-            st.session_state.lib_contributions_loaded = False  # Force reload
+            st.success(f"Metadata saved for {success_count} poems!")
+            st.session_state.lib_contributions_loaded = False
             st.rerun()
         else:
             st.error("Failed to save metadata.")
-    
-    # Show success message
-    if st.session_state.lib_metadata_saved:
-        st.success("Metadata saved successfully!")
-        st.session_state.lib_metadata_saved = False
 
 
-def display_library_stats():
-    """Display library statistics"""
+def delete_single_poem(filepath: str) -> bool:
+    """Delete a single poem file"""
+    try:
+        if filepath and Path(filepath).exists():
+            os.remove(filepath)
+            logger.info(f"Deleted single poem: {filepath}")
+            return True
+    except Exception as e:
+        logger.error(f"Error deleting {filepath}: {e}")
+    return False
+
+
+def display_delete_tab(batches: Dict):
+    """Delete batch tab - now with ungrouped poem support"""
+    st.subheader("Delete Poems")
+    st.warning("Deleting permanently removes poems from the library.")
     
-    if not LIBRARY_AVAILABLE:
+    # Handle ungrouped poems first
+    ungrouped = batches.get('_ungrouped_', {}).get('poems', [])
+    if ungrouped:
+        st.markdown("### Ungrouped Poems")
+        st.info(f"{len(ungrouped)} poem(s) without batch assignment can be deleted individually.")
+        
+        with st.expander("Manage ungrouped poems", expanded=True):
+            for i, poem in enumerate(ungrouped):
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.write(f"{i+1}. {poem.get('title', 'Untitled')[:50]}")
+                with col2:
+                    if st.button("Delete", key=f"del_ungrouped_{i}"):
+                        if delete_single_poem(poem.get('_filepath', '')):
+                            st.success(f"Deleted: {poem.get('title', 'Untitled')[:30]}")
+                            st.session_state.lib_contributions_loaded = False
+                            st.rerun()
+                        else:
+                            st.error("Failed to delete")
+            
+            st.markdown("---")
+            confirm_all = st.checkbox("I confirm deletion of ALL ungrouped poems", key="confirm_all_ungrouped")
+            if st.button("Delete ALL Ungrouped", key="btn_del_all_ungrouped", disabled=not confirm_all):
+                deleted = sum(1 for p in ungrouped if delete_single_poem(p.get('_filepath', '')))
+                if deleted > 0:
+                    st.success(f"Deleted {deleted} ungrouped poems")
+                    st.session_state.lib_contributions_loaded = False
+                    st.rerun()
+        
+        st.markdown("---")
+    
+    # Regular batches
+    st.markdown("### Batches")
+    deletable = {k: v for k, v in batches.items() if k != '_ungrouped_'}
+    
+    if not deletable:
+        st.info("No batches available to delete.")
         return
     
-    try:
-        library = TajikLibraryManager()
-        stats = library.get_statistics()
-        
-        if stats.get('total_volumes', 0) > 0:
-            st.subheader("Library Statistics")
+    selected_batch_id = display_batch_selector(deletable, key_prefix="delete", exclude_ungrouped=True)
+    
+    if not selected_batch_id:
+        return
+    
+    batch_data = deletable[selected_batch_id]
+    
+    st.markdown("---")
+    display_batch_info(batch_data)
+    st.markdown("---")
+    
+    st.error(f"This will permanently delete **{len(batch_data['poems'])} poems**!")
+    
+    confirm = st.checkbox(
+        f"I confirm I want to delete '{batch_data['source_filename']}'",
+        key="delete_confirm"
+    )
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("Delete Batch", type="primary", disabled=not confirm, key="btn_delete"):
+            with st.spinner("Deleting..."):
+                deleted, errors = delete_batch(selected_batch_id, batches)
             
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Volumes", stats.get('total_volumes', 0))
-            with col2:
-                st.metric("Poems", stats.get('total_poems', 0))
-            with col3:
-                st.metric("Authors", stats.get('authors_count', 0))
-            with col4:
-                year_range = f"{stats.get('publication_years', {}).get('min', '-')} - {stats.get('publication_years', {}).get('max', '-')}"
-                st.metric("Year Range", year_range)
-    except Exception as e:
-        logger.error(f"Error loading library stats: {e}")
+            if errors:
+                for err in errors:
+                    st.error(err)
+            
+            if deleted > 0:
+                st.success(f"Deleted {deleted} poems")
+                st.session_state.lib_contributions_loaded = False
+                st.rerun()
+    
+    with col2:
+        if st.button("Cancel", key="btn_cancel"):
+            st.rerun()
 
 
 def main():
     init_library_state()
     
-    st.title("Library Management")
-    st.markdown("Manage poetry volumes and metadata")
+    st.title("Library")
+    st.markdown("Manage your poetry collection")
     st.markdown("---")
     
     if not CORPUS_AVAILABLE:
         st.error("Corpus manager not available.")
         st.stop()
     
-    # Load contributions
+    # Load data
     if not st.session_state.lib_contributions_loaded:
-        st.session_state.lib_contributions = load_existing_contributions()
+        contributions, batches = load_existing_contributions()
+        st.session_state.lib_contributions = contributions
+        st.session_state.lib_batches = batches
         st.session_state.lib_contributions_loaded = True
     
     contributions = st.session_state.lib_contributions
+    batches = st.session_state.lib_batches
     
-    # Display stats
-    display_library_stats()
+    # Reload button
+    if st.button("Reload", key="btn_reload"):
+        st.session_state.lib_contributions_loaded = False
+        st.rerun()
     
     st.markdown("---")
     
-    # Tabs for different views
-    tab1, tab2, tab3 = st.tabs(["Browse", "Add Metadata", "Register Volume"])
+    # Tabs
+    tab1, tab2, tab3 = st.tabs(["Browse", "Edit Metadata", "Delete Batch"])
     
     with tab1:
-        # Reload button
-        if st.button("Reload", key="btn_reload"):
-            st.session_state.lib_contributions_loaded = False
-            st.rerun()
-        
-        display_contributions_table(contributions)
+        display_browse_tab(contributions, batches)
     
     with tab2:
-        display_bulk_metadata_form(contributions)
+        display_edit_metadata_tab(batches)
     
     with tab3:
-        st.subheader("Register Complete Volume")
-        st.info("This creates a formal library entry with full bibliographic data.")
-        
-        if not LIBRARY_AVAILABLE:
-            st.warning("Extended library manager not available.")
-        else:
-            # Full volume registration form
-            st.markdown("### Bibliographic Information")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                vol_author = st.text_input("Author Name", key="vol_author")
-                vol_title = st.text_input("Volume Title", key="vol_title")
-                vol_year = st.number_input("Publication Year", 1900, 2030, 2000, key="vol_year")
-                vol_publisher = st.text_input("Publisher", key="vol_publisher")
-            
-            with col2:
-                vol_city = st.text_input("City", key="vol_city")
-                vol_pages = st.number_input("Total Pages", 0, 1000, 0, key="vol_pages")
-                vol_genre = st.multiselect(
-                    "Genres",
-                    options=[g.value for g in Genre],
-                    key="vol_genre"
-                )
-                vol_notes = st.text_area("Notes", key="vol_notes", height=100)
-            
-            st.markdown("---")
-            
-            # Select poems to include
-            ungrouped = [c for c in contributions if not c.get('volume_metadata', {}).get('collection')]
-            
-            if ungrouped:
-                st.markdown("### Select Poems for This Volume")
-                
-                include_all = st.checkbox("Include all unassigned poems", value=True, key="vol_include_all")
-                
-                if not include_all:
-                    selected_poems = st.multiselect(
-                        "Select poems",
-                        options=[f"{c.get('poem_id', '-')}: {c.get('title', '-')[:30]}" for c in ungrouped],
-                        key="vol_selected_poems"
-                    )
-                
-                st.markdown("---")
-                
-                if st.button("Register Volume", type="primary", key="btn_register_volume"):
-                    if not vol_author or not vol_title:
-                        st.error("Author and Title are required.")
-                    else:
-                        try:
-                            library = TajikLibraryManager()
-                            
-                            # Create metadata
-                            metadata = VolumeMetadata(
-                                author_name=vol_author,
-                                volume_title=vol_title,
-                                publication_year=vol_year,
-                                publisher=vol_publisher if vol_publisher else None,
-                                city=vol_city if vol_city else None,
-                                pages=vol_pages if vol_pages > 0 else None,
-                                notes=vol_notes if vol_notes else None
-                            )
-                            
-                            # Get poems data
-                            poems_to_register = ungrouped if include_all else [
-                                c for c in ungrouped
-                                if f"{c.get('poem_id', '-')}: {c.get('title', '-')[:30]}" in selected_poems
-                            ]
-                            
-                            # Prepare poems data
-                            poems_data = []
-                            for contrib in poems_to_register:
-                                poems_data.append({
-                                    'content': contrib.get('raw_text', ''),
-                                    'analysis': contrib.get('analysis', {})
-                                })
-                            
-                            # Register volume
-                            volume_id = library.register_volume(metadata, poems_data)
-                            
-                            # Also update simple corpus metadata
-                            simple_metadata = {
-                                'author': vol_author,
-                                'collection': vol_title,
-                                'year': vol_year,
-                                'publisher': vol_publisher
-                            }
-                            
-                            for contrib in poems_to_register:
-                                filepath = contrib.get('_filepath')
-                                if filepath:
-                                    save_contribution_metadata(filepath, simple_metadata)
-                            
-                            st.success(f"Volume registered: {volume_id}")
-                            st.session_state.lib_contributions_loaded = False
-                            st.rerun()
-                            
-                        except Exception as e:
-                            st.error(f"Error registering volume: {e}")
-                            logger.exception("Volume registration failed")
-            else:
-                st.info("No unassigned poems available. Analyze poems first.")
+        display_delete_tab(batches)
 
 
-# Run
 main()

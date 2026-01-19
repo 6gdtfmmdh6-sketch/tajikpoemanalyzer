@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "description": "Dynamische Themen-Konfiguration für den Tajik Poetry Analyzer",
+    "last_updated": "2026-01-18",
+    "note": "Diese Datei kann von Contributors erweitert werden. Neue Themen oder Keywords hinzufügen, bestehende nicht löschen."
+  },
+  "themes": {
+    "Love": {
+      "name_de": "Liebe",
+      "name_fa": "عشق",
+      "keywords": ["муҳаббат", "ишқ", "дил", "маҳбуб", "ёр", "дилбар", "ошиқ", "маъшуқ"],
+      "category": "classical",
+      "source": "original"
+    },
+    "Nature": {
+      "name_de": "Natur",
+      "name_fa": "طبیعت",
+      "keywords": ["дарё", "кӯҳ", "гул", "баҳор", "навбаҳор", "осмон", "офтоб", "моҳ", "ситора"],
+      "category": "classical",
+      "source": "original"
+    },
+    "Homeland": {
+      "name_de": "Heimat",
+      "name_fa": "وطن",
+      "keywords": ["ватан", "тоҷикистон", "чашма", "диёр", "марзу бум", "кишвар"],
+      "category": "classical",
+      "source": "original"
+    },
+    "Religion": {
+      "name_de": "Religion",
+      "name_fa": "دین",
+      "keywords": ["худо", "ҷаннат", "ибодат", "намоз", "масҷид", "аллоҳ", "паёмбар"],
+      "category": "classical",
+      "source": "original"
+    },
+    "Mysticism": {
+      "name_de": "Mystik",
+      "name_fa": "تصوف",
+      "keywords": ["тариқат", "мақом", "ҳақиқат", "маърифат", "ваҳдат", "фано"],
+      "category": "classical",
+      "source": "original"
+    },
+    "Philosophy": {
+      "name_de": "Philosophie",
+      "name_fa": "فلسفه",
+      "keywords": ["ҳикмат", "дониш", "хирад", "ақл", "маънӣ", "ҷаҳон", "ҳастӣ"],
+      "category": "classical",
+      "source": "original"
+    }
+  },
+  "_extension_template": {
+    "_comment": "Vorlage für neue Themen - kopieren und anpassen",
+    "NewTheme": {
+      "name_de": "Deutscher Name",
+      "name_fa": "نام فارسی",
+      "keywords": ["ключевое", "слово"],
+      "category": "modern|classical|soviet",
+      "source": "contributor:username"
+    }
+  }
+}

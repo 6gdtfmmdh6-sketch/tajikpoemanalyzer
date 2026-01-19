@@ -64,3 +64,30 @@ results/
 *.jpg
 *.jpeg
 temp_*.pdf
+
+# =============================================================================
+# COPYRIGHT PROTECTION - Urheberrechtlich geschützte Inhalte
+# =============================================================================
+# Diese Dateien enthalten vollständige Gedichttexte und dürfen nicht
+# öffentlich auf GitHub verfügbar sein.
+
+# Quelltexte der Gedichtbände (Volltexte)
+data/dilorom_*.txt
+data/poems.txt
+data/shahnama.txt
+
+# Lokale Contributions mit Volltexten (für deine Forschung)
+# Die öffentliche Version liegt in tajik_corpus/contributions_public/
+tajik_corpus/contributions/
+
+# Backup der lokalen Volltexte
+tajik_corpus/contributions_backup/
+
+# =============================================================================
+# ÖFFENTLICH ERLAUBT (nicht ignoriert):
+# - data/tajik_lexicon.json (Wortliste)
+# - data/tajik_corpus.txt (Wortliste)
+# - data/themes.json (Themen-Konfiguration)
+# - tajik_corpus/contributions_public/ (bereinigte Analysen ohne Volltext)
+# - tajik_corpus/corpus/master.json (aggregierte Wortdaten)
+# =============================================================================
