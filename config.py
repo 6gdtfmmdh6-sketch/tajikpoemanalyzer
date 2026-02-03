@@ -2,14 +2,15 @@
 """
 Configuration settings for Tajik Poetry Analyzer
 """
-
+import os
 from pathlib import Path
 
-# Paths
-BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR / "data"
-CORPORA_DIR = BASE_DIR / "tajik_corpora"
-LIBRARY_DIR = BASE_DIR / "tajik_poetry_library"
+
+# Use environment variables for paths, with defaults
+BASE_DIR = Path(os.getenv('TAJIK_ANALYZER_BASE_DIR', Path(__file__).parent))
+DATA_DIR = BASE_DIR / os.getenv('TAJIK_ANALYZER_DATA_DIR', "data")
+CORPORA_DIR = BASE_DIR / os.getenv('TAJIK_ANALYZER_CORPORA_DIR', "tajik_corpora")
+LIBRARY_DIR = BASE_DIR / os.getenv('TAJIK_ANALYZER_LIBRARY_DIR', "tajik_poetry_library")
 
 # Analysis settings
 LEXICON_PATH = DATA_DIR / "tajik_lexicon.json"

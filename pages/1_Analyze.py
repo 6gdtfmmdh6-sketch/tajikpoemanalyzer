@@ -1,46 +1,42 @@
 #!/usr/bin/env python3
 """
 Enhanced Web-UI for Tajik Poetry Analyzer
-Supports both classical and enhanced analysis with free verse detection
-
-Features:
-1. Classical ʿArūḍ analysis (16 meters)
-2. Enhanced analysis with free verse detection
-3. Modern verse metrics
-4. PDF and OCR support
-5. Scientific quality validation
-
-FIXED: Proper session_state handling for buttons and downloads
 """
 
 import streamlit as st
 from pathlib import Path
+import sys
 import tempfile
 import re
 from typing import List, Optional, Dict, Any
 import logging
 from datetime import datetime
 
+# Ensure parent directory is in path for imports
+parent_dir = Path(__file__).parent.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Track import error for debugging
+ANALYZER_ERROR = None
+
 # Import from consolidated analyzer
 try:
     from analyzer import (
-        TajikPoemAnalyzer,
         EnhancedTajikPoemAnalyzer,
         AnalysisConfig,
         PoemData,
         AruzMeterAnalyzer,
-        AdvancedRhymeAnalyzer,
+        RhymeRadifAnalyzer,
         MeterConfidence,
         StructuralAnalysis,
         EnhancedStructuralAnalysis,
-        EnhancedComprehensiveAnalysis,
+        ComprehensiveAnalysis,
         ModernVerseMetrics,
-        EnhancedPoemSplitter,
-        QualityValidator,
         ExcelReporter,
         RadifAnalysis,
         EnhancedRadifDetector
@@ -48,6 +44,8 @@ try:
     ANALYZER_AVAILABLE = True
     logger.info("Analyzer loaded successfully")
 except ImportError as e:
+    import traceback
+    ANALYZER_ERROR = traceback.format_exc()
     logger.error(f"Analyzer not available: {e}")
     ANALYZER_AVAILABLE = False
 
@@ -64,9 +62,7 @@ try:
     from pdf_handler import read_file_with_pdf_support
 except ImportError:
     st.error("Error: Could not import pdf_handler.")
-    st.stop()
-
-# Note: page_config is set in main ui.py
+    st.stop()# Note: page_config is set in main ui.py
 
 # CSS
 st.markdown("""
@@ -254,7 +250,7 @@ def display_classical_results(analysis, poem_num: int, poem_text: str):
             st.write("**Top Words:** " + ", ".join([f"{w}({c})" for w, c in content.word_frequencies[:5]]))
 
 
-def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: int, poem_text: str):
+def display_enhanced_results(analysis: "ComprehensiveAnalysis", poem_num: int, poem_text: str):
     """Display enhanced analysis results with all details"""
     structural = analysis.structural
     content = analysis.content
@@ -262,11 +258,13 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
     badge = "Free Verse" if structural.is_free_verse else "Classical"
     
     with st.expander(f"Poem {poem_num} - {badge} - {content.total_words} words", expanded=False):
+        # Show original text but indicate preprocessing
         st.text(poem_text[:500] + "..." if len(poem_text) > 500 else poem_text)
+        st.caption(f"*Note: {structural.lines} lines analyzed (titles/dedications excluded)*")
         
         st.markdown("---")
         
-        # Basic metrics
+        # Basic metrics - NOW USING CORRECT COUNTS
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             if structural.is_free_verse:
@@ -276,9 +274,10 @@ def display_enhanced_results(analysis: EnhancedComprehensiveAnalysis, poem_num: 
         with col2:
             st.metric("Confidence", structural.meter_confidence.value.title())
         with col3:
-            st.metric("Lines", structural.lines)
+            st.metric("Lines", structural.lines)  # CORRECT COUNT
         with col4:
             st.metric("Words", content.total_words)
+
         
         st.markdown("---")
         
@@ -370,12 +369,13 @@ def run_analysis(poems: List[str], analysis_mode: str) -> List[Dict]:
     if analysis_mode == "Classical (ʿArūḍ only)":
         analyzer = load_classical_analyzer()
     else:
-        analyzer = load_enhanced_analyzer()
+        analyzer = load_enhanced_analyzer()  # This now includes preprocessing
     
     all_results = []
     
     for i, poem_text in enumerate(poems):
         try:
+            # The analyzer now handles preprocessing internally
             analysis = analyzer.analyze_poem(poem_text)
             mode = 'classical' if analysis_mode == "Classical (ʿArūḍ only)" else 'enhanced'
             all_results.append({
@@ -606,14 +606,22 @@ def display_corpus_section():
 # Main Application
 # -------------------------------------------------------------------
 def main():
+    # FIRST THING - Initialize session state
+    init_session_state()
+
     if not ANALYZER_AVAILABLE:
-        st.error("Analyzer not available. Ensure analyzer.py exists.")
+        st.error("❌ Analyzer not available")
+        st.markdown("### Debug Information")
+        if ANALYZER_ERROR:
+            st.code(ANALYZER_ERROR, language="python")
+        st.markdown("""
+        **Common fixes:**
+        1. Ensure `analyzer.py` exists in the app root directory
+        2. Check for syntax errors in `analyzer.py`
+        3. Verify all required dependencies are installed
+        """)
         st.stop()
     
-    init_session_state()
-    
-    st.title("Tajik Poetry Analyzer")
-    st.markdown("---")
 
     # Sidebar
     with st.sidebar:

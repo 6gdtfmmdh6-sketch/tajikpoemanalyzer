@@ -10,6 +10,7 @@ import streamlit as st
 import json
 import csv
 import io
+import base64
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from collections import Counter
@@ -39,6 +40,34 @@ try:
     CORPUS_AVAILABLE = True
 except ImportError:
     CORPUS_AVAILABLE = False
+
+
+# Plotly config: disable broken PNG export, keep other tools
+PLOTLY_CONFIG = {
+    'modeBarButtonsToRemove': ['toImage'],
+    'displaylogo': False
+}
+
+
+def export_chart_to_file(fig, filename: str, key: str):
+    """Add download button for chart export as interactive HTML"""
+    try:
+        html_buffer = io.StringIO()
+        fig.write_html(
+            html_buffer, 
+            include_plotlyjs='cdn',
+            full_html=True,
+            include_mathjax=False
+        )
+        st.download_button(
+            label="💾 Export",
+            data=html_buffer.getvalue(),
+            file_name=filename.replace('.png', '.html'),
+            mime="text/html",
+            key=key
+        )
+    except Exception as e:
+        st.caption(f"⚠️ Export-Fehler: {e}")
 
 
 def init_viz_state():
@@ -121,8 +150,33 @@ def find_poems_with_tag(contributions: List[Dict], tag_prefix: str, tag_value: s
     return matching
 
 
+def format_volume_label(batch_data: Dict) -> str:
+    """Format volume label from metadata: Author: Title (Year)"""
+    poems = batch_data.get('poems', [])
+    if not poems:
+        return batch_data.get('source_filename', 'Unknown')
+    
+    # Get metadata from first poem in batch
+    meta = poems[0].get('volume_metadata', {})
+    author = meta.get('author', '')
+    title = meta.get('collection', '')
+    year = meta.get('year', '')
+    
+    if author and title:
+        if year:
+            return f"{author}: {title} ({year})"
+        return f"{author}: {title}"
+    elif title:
+        if year:
+            return f"{title} ({year})"
+        return title
+    
+    # Fallback to filename
+    return batch_data.get('source_filename', 'Unknown')
+
+
 def group_contributions_by_batch(contributions: List[Dict]) -> Dict[str, Dict]:
-    """Group contributions by batch"""
+    """Group contributions by batch with metadata"""
     batches = {}
     
     for c in contributions:
@@ -133,9 +187,14 @@ def group_contributions_by_batch(contributions: List[Dict]) -> Dict[str, Dict]:
             batches[batch_id] = {
                 'poems': [],
                 'source_filename': source,
-                'batch_id': batch_id
+                'batch_id': batch_id,
+                'volume_metadata': c.get('volume_metadata', {})
             }
         batches[batch_id]['poems'].append(c)
+    
+    # Add formatted labels
+    for batch_id, batch_data in batches.items():
+        batch_data['label'] = format_volume_label(batch_data)
     
     return batches
 
@@ -220,7 +279,8 @@ def extract_analysis_stats(contributions: List[Dict]) -> Dict:
             if rhyme.get('stanza_structure'):
                 stats['stanza_types'][rhyme.get('stanza_structure', 'unknown')] += 1
         
-        fv = analysis.get('free_verse_analysis', {})
+        # Free verse analysis is stored under quality_metrics
+        fv = analysis.get('quality_metrics', {}).get('free_verse_analysis', {})
         if fv:
             if fv.get('enjambement_score') is not None:
                 stats['enjambement_scores'].append({
@@ -379,7 +439,8 @@ def plot_word_frequency_bar(word_freqs: List[tuple], top_n: int, title: str = "W
         height=500 + (top_n // 20) * 50
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    export_chart_to_file(fig, "word_frequencies.html", "dl_wordfreq")
 
 
 def plot_clickable_word_cloud(word_freqs: List[tuple], contributions: List[Dict]):
@@ -456,16 +517,20 @@ def plot_word_frequency_comparison(data_sets: Dict[str, List[tuple]], top_n: int
     else:
         words_sorted = sorted(all_words)
     
+    # Plotly default color sequence
+    colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3', '#FF6692', '#B6E880']
+    
     fig = go.Figure()
     
-    for name, freqs in data_sets.items():
+    for i, (name, freqs) in enumerate(data_sets.items()):
         freq_dict = dict(freqs)
         values = [freq_dict.get(w, 0) for w in words_sorted]
         
         fig.add_trace(go.Bar(
             name=name,
             x=words_sorted,
-            y=values
+            y=values,
+            marker_color=colors[i % len(colors)]
         ))
     
     fig.update_layout(
@@ -477,7 +542,8 @@ def plot_word_frequency_comparison(data_sets: Dict[str, List[tuple]], top_n: int
         height=600
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    export_chart_to_file(fig, "word_freq_comparison.html", "dl_wordcomp")
 
 
 def plot_theme_distribution(contributions: List[Dict], clickable: bool = True):
@@ -502,12 +568,18 @@ def plot_theme_distribution(contributions: List[Dict], clickable: bool = True):
     themes, counts = zip(*theme_counts.most_common(10))
     
     fig = go.Figure(data=[
-        go.Pie(labels=list(themes), values=list(counts), hole=0.3)
+        go.Pie(
+            labels=list(themes), 
+            values=list(counts), 
+            hole=0.3,
+            marker=dict(colors=['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52'])
+        )
     ])
     
     fig.update_layout(title="Theme Distribution", height=400)
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    export_chart_to_file(fig, "theme_distribution.html", "dl_theme")
     
     if clickable:
         st.markdown("### Click a theme to see poems:")
@@ -579,7 +651,8 @@ def plot_meter_distribution(contributions: List[Dict], clickable: bool = True):
     
     fig.update_layout(title="Meter Distribution", xaxis_title="Meter", yaxis_title="Count", height=400)
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    export_chart_to_file(fig, "meter_distribution.png", "dl_meter")
     
     if clickable:
         st.markdown("### Click a meter to see poems:")
@@ -629,24 +702,26 @@ def plot_syllable_patterns(stats: Dict):
     col1, col2 = st.columns(2)
     
     with col1:
-        fig = go.Figure(data=[go.Histogram(x=avgs, nbinsx=20, marker_color='teal')])
-        fig.update_layout(
+        fig1 = go.Figure(data=[go.Histogram(x=avgs, nbinsx=20, marker_color='teal')])
+        fig1.update_layout(
             title="Average Syllables per Line Distribution",
             xaxis_title="Average Syllables",
             yaxis_title="Number of Poems",
             height=350
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig1, use_container_width=True, config=PLOTLY_CONFIG)
+        export_chart_to_file(fig1, "syllables_avg.png", "dl_syl_avg")
     
     with col2:
-        fig = go.Figure(data=[go.Histogram(x=variances, nbinsx=20, marker_color='coral')])
-        fig.update_layout(
+        fig2 = go.Figure(data=[go.Histogram(x=variances, nbinsx=20, marker_color='coral')])
+        fig2.update_layout(
             title="Line Length Variance Distribution",
             xaxis_title="Variance (max-min syllables)",
             yaxis_title="Number of Poems",
             height=350
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig2, use_container_width=True, config=PLOTLY_CONFIG)
+        export_chart_to_file(fig2, "syllables_variance.png", "dl_syl_var")
 
 
 def plot_enjambement_analysis(stats: Dict):
@@ -664,7 +739,8 @@ def plot_enjambement_analysis(stats: Dict):
         yaxis_title="Number of Poems",
         height=350
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    export_chart_to_file(fig, "enjambement_distribution.png", "dl_enj")
     
     # Top enjambement poems
     sorted_enj = sorted(stats['enjambement_scores'], key=lambda x: x['score'], reverse=True)[:10]
@@ -689,7 +765,8 @@ def plot_prose_poetry_analysis(stats: Dict):
         yaxis_title="Number of Poems",
         height=350
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    export_chart_to_file(fig, "prose_poetry_distribution.png", "dl_prose")
 
 
 def plot_comprehensive_stats(stats: Dict):
@@ -723,14 +800,21 @@ def plot_comprehensive_stats(stats: Dict):
         stanzas, counts = zip(*stats['stanza_types'].most_common(10))
         fig = go.Figure(data=[go.Bar(x=list(stanzas), y=list(counts), marker_color='purple')])
         fig.update_layout(height=300, xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+        export_chart_to_file(fig, "stanza_types.html", "dl_stanza")
     
     if stats['registers']:
         st.markdown("### Register Distribution")
         registers, counts = zip(*stats['registers'].most_common())
-        fig = go.Figure(data=[go.Pie(labels=list(registers), values=list(counts), hole=0.4)])
+        fig = go.Figure(data=[go.Pie(
+            labels=list(registers), 
+            values=list(counts), 
+            hole=0.4,
+            marker=dict(colors=['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3', '#FF6692', '#B6E880'])
+        )])
         fig.update_layout(height=300)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+        export_chart_to_file(fig, "register_distribution.html", "dl_register")
 
 
 def plot_timeline(contributions: List[Dict]):
@@ -768,7 +852,8 @@ def plot_timeline(contributions: List[Dict]):
         height=400
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    export_chart_to_file(fig, "timeline.html", "dl_timeline")
     
     st.subheader("Timeline Statistics")
     col1, col2, col3 = st.columns(3)
@@ -781,8 +866,35 @@ def plot_timeline(contributions: List[Dict]):
         st.metric("Most Productive Year", f"{most_productive[0]} ({most_productive[1]})")
 
 
+def _calculate_mtld_for_viz(words: List[str], threshold: float = 0.72) -> float:
+    """Calculate MTLD (Measure of Textual Lexical Diversity) - McCarthy & Jarvis 2010"""
+    if len(words) < 10:
+        return 0.0
+    
+    def mtld_forward(word_list):
+        factors = 0.0
+        start = 0
+        for i in range(1, len(word_list) + 1):
+            segment = word_list[start:i]
+            ttr = len(set(segment)) / len(segment)
+            if ttr <= threshold:
+                factors += 1
+                start = i
+        if start < len(word_list):
+            remaining = word_list[start:]
+            ttr = len(set(remaining)) / len(remaining)
+            factors += (1 - ttr) / (1 - threshold) if threshold < 1 else 0
+        return factors
+    
+    forward = mtld_forward(words)
+    backward = mtld_forward(words[::-1])
+    avg_factors = (forward + backward) / 2
+    
+    return len(words) / avg_factors if avg_factors > 0 else float(len(words))
+
+
 def plot_lexical_diversity_comparison(data_sets: Dict[str, List[Dict]]):
-    """Compare lexical diversity across collections"""
+    """Compare lexical diversity (MTLD) across collections"""
     if not PLOTLY_AVAILABLE:
         st.warning("Plotly not available")
         return
@@ -794,30 +906,29 @@ def plot_lexical_diversity_comparison(data_sets: Dict[str, List[Dict]]):
         words = re.findall(r'[а-яёғӣӯҳқҷА-ЯЁҒӢӮҲҚҶ]+', text.lower())
         
         if words:
-            unique = len(set(words))
-            total = len(words)
-            diversity = unique / total if total > 0 else 0
-            diversities[name] = diversity
+            mtld = _calculate_mtld_for_viz(words)
+            diversities[name] = mtld
     
     if not diversities:
         st.info("No data available")
         return
     
     names = list(diversities.keys())
-    values = [diversities[n] * 100 for n in names]
+    values = [diversities[n] for n in names]
     
     fig = go.Figure(data=[
         go.Bar(x=names, y=values, marker_color='coral')
     ])
     
     fig.update_layout(
-        title="Lexical Diversity Comparison",
+        title="Lexical Diversity (MTLD)",
         xaxis_title="Collection",
-        yaxis_title="Diversity (%)",
+        yaxis_title="MTLD Score (higher = more diverse)",
         height=400
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    export_chart_to_file(fig, "lexical_diversity.html", "dl_lexdiv")
 
 
 def main():
@@ -879,17 +990,17 @@ def main():
         else:
             grouped_by_batch = group_contributions_by_batch(contributions)
             batch_options = ["All"] + [
-                f"{v['source_filename']} ({len(v['poems'])})" 
+                f"{v['label']} ({len(v['poems'])})" 
                 for k, v in grouped_by_batch.items() if k != '_ungrouped_'
             ]
             
-            selected = st.selectbox("Select batch:", batch_options, key="viz_batch_select")
+            selected = st.selectbox("Select volume:", batch_options, key="viz_batch_select")
             
             if selected == "All":
                 text = get_combined_text(contributions)
             else:
                 for batch_id, batch_data in grouped_by_batch.items():
-                    if f"{batch_data['source_filename']} ({len(batch_data['poems'])})" == selected:
+                    if f"{batch_data['label']} ({len(batch_data['poems'])})" == selected:
                         text = get_combined_text(batch_data['poems'])
                         break
             
@@ -916,7 +1027,7 @@ def main():
             st.info("Need at least 2 batches to compare. Upload more files in the Analyze page.")
         else:
             available = [
-                (batch_id, f"{data['source_filename']} ({len(data['poems'])} poems)")
+                (batch_id, f"{data['label']} ({len(data['poems'])} poems)")
                 for batch_id, data in real_batches.items()
             ]
             
@@ -949,7 +1060,7 @@ def main():
                 data_sets = {}
                 for batch_id in selected_batches:
                     batch_data = real_batches[batch_id]
-                    name = batch_data['source_filename'][:30]
+                    name = batch_data['label'][:40]
                     text = get_combined_text(batch_data['poems'])
                     data_sets[name] = extract_word_frequencies(text, compare_top_n)
                 
@@ -958,7 +1069,7 @@ def main():
                 st.subheader("Lexical Diversity")
                 
                 comparison_data = {
-                    real_batches[b]['source_filename'][:30]: real_batches[b]['poems'] 
+                    real_batches[b]['label'][:40]: real_batches[b]['poems'] 
                     for b in selected_batches
                 }
                 plot_lexical_diversity_comparison(comparison_data)
@@ -979,20 +1090,54 @@ def main():
                 st.session_state.viz_selected_meter = None
                 st.rerun()
         else:
+            # Batch filter for distributions
+            grouped_dist = group_contributions_by_batch(contributions)
+            batch_opts_dist = ["All"] + [
+                f"{v['label']} ({len(v['poems'])})" 
+                for k, v in grouped_dist.items() if k != '_ungrouped_'
+            ]
+            selected_dist = st.selectbox("Select volume:", batch_opts_dist, key="dist_batch_select")
+            
+            if selected_dist == "All":
+                filtered_dist = contributions
+            else:
+                filtered_dist = contributions
+                for batch_id, batch_data in grouped_dist.items():
+                    if f"{batch_data['label']} ({len(batch_data['poems'])})" == selected_dist:
+                        filtered_dist = batch_data['poems']
+                        break
+            
             col1, col2 = st.columns(2)
             
             with col1:
                 st.subheader("Theme Distribution")
-                plot_theme_distribution(contributions, clickable=True)
+                plot_theme_distribution(filtered_dist, clickable=True)
             
             with col2:
                 st.subheader("Meter Distribution")
-                plot_meter_distribution(contributions, clickable=True)
+                plot_meter_distribution(filtered_dist, clickable=True)
     
     with tab4:
         st.header("Detailed Analysis")
         
-        stats = extract_analysis_stats(contributions)
+        # Batch filter for detailed analysis
+        grouped_detail = group_contributions_by_batch(contributions)
+        batch_opts_detail = ["All"] + [
+            f"{v['label']} ({len(v['poems'])})" 
+            for k, v in grouped_detail.items() if k != '_ungrouped_'
+        ]
+        selected_detail = st.selectbox("Select volume:", batch_opts_detail, key="detail_batch_select")
+        
+        if selected_detail == "All":
+            filtered_detail = contributions
+        else:
+            filtered_detail = contributions
+            for batch_id, batch_data in grouped_detail.items():
+                if f"{batch_data['label']} ({len(batch_data['poems'])})" == selected_detail:
+                    filtered_detail = batch_data['poems']
+                    break
+        
+        stats = extract_analysis_stats(filtered_detail)
         
         plot_comprehensive_stats(stats)
         
@@ -1051,7 +1196,7 @@ def main():
             
             grouped_by_batch = group_contributions_by_batch(contributions)
             batch_options = ["All"] + [
-                f"{v['source_filename']}" 
+                f"{v['label']}" 
                 for k, v in grouped_by_batch.items() if k != '_ungrouped_'
             ]
             
@@ -1061,7 +1206,7 @@ def main():
                 text = get_combined_text(contributions)
             else:
                 for batch_id, batch_data in grouped_by_batch.items():
-                    if batch_data['source_filename'] == export_batch:
+                    if batch_data['label'] == export_batch:
                         text = get_combined_text(batch_data['poems'])
                         break
             
