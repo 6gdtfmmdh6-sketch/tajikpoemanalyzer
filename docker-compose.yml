@@ -15,7 +15,7 @@ services:
       - ./tajik_corpus:/app/tajik_corpus
       - ./tajik_poetry_library:/app/tajik_poetry_library
     environment:
-      - TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
+      
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
     restart: unless-stopped

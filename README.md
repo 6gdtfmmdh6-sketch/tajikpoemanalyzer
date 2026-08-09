@@ -14,6 +14,48 @@ Analysis tool for Tajik poetry with focus on **free verse (shi'ri nou)** and cla
 
 ---
 
+## Data Policy: Texts stay local, data travels
+
+**Never online:** full poem texts (`data/*.txt` volumes, `tajik_corpus/corpus/master.json`,
+`tajik_corpus/contributions/`, the poetry library, snapshots). All of these are
+git-ignored and docker-ignored. At runtime Docker mounts them as volumes; they are
+never baked into the image.
+
+**Shareable:** the derived feature layer. `python knowledge_export.py features`
+(or the **Export** page in the app) produces `tajik_corpus/exports/features_public.json`:
+per poem a SHA-256 text hash, the incipit (first line, ≤60 chars), bibliographic
+metadata and the complete analysis (meter, rhyme, radīf, syllables, MTLD, themes).
+Texts cannot be reconstructed from this file — publish it freely (GitHub, Zenodo).
+
+**Backup / hand-over:** `python knowledge_export.py snapshot` bundles the complete
+private research state into `snapshots/knowledge_snapshot_<date>.tar.gz`. Restore
+with `python knowledge_export.py restore <file>` or via the Export page. Share this
+archive only within a defined research group (cf. § 60d UrhG), never publicly.
+
+**One-time cleanup:** old commits still contain full texts. Run
+`scripts/purge_history.sh` (requires `git-filter-repo`), then force-push.
+
+## Repository layout
+
+- `analyzer.py` — core analysis (to be split into a package; see Roadmap)
+- `knowledge_export.py` — feature export / snapshot / restore
+- `pages/` — Streamlit UI (1 Analyze, 2 Library, 3 Visualize, 4 Corpus, 5 Export)
+- `scripts/` — one-off maintenance scripts (batch migration, history purge)
+- `experimental/` — unwired prototypes (Flask API, network analysis, MARC21 export,
+  integration demo). Not imported by the app.
+
+## Roadmap
+
+1. Integrate `radif_detector.py` (structural `ClassicalRadifDetector`) into
+   `analyzer.py`, replacing the statistical `EnhancedRadifDetector` — see
+   `experimental/integration_demo.py`.
+2. Split `analyzer.py` (5k lines, 44 classes) into modules: phonetics, aruz,
+   structure, content, reporting.
+3. `LiteraryAssessor` scores are an **experimental heuristic** — do not cite them
+   as measurements.
+
+---
+
 ## Quick Start
 
 ### Option A: Docker (recommended)

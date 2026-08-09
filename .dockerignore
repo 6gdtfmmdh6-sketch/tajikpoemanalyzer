@@ -51,3 +51,14 @@ build/
 # Documentation (optional - remove if you want docs in container)
 *.md
 !README.md
+
+# Copyright: full poem texts never enter the image (mounted as volumes at runtime)
+data/dilorom_*.txt
+data/poems.txt
+data/shahnama.txt
+data/tajik_corpus.txt
+tajik_corpus/
+tajik_poetry_library/
+snapshots/
+exports/
+uploads/

@@ -91,3 +91,13 @@ tajik_corpus/contributions_backup/
 # - tajik_corpus/contributions_public/ (bereinigte Analysen ohne Volltext)
 # - tajik_corpus/corpus/master.json (aggregierte Wortdaten)
 # =============================================================================
+
+# =============================================================================
+# PRIVATER WISSENSSTAND (nie online) — knowledge_export.py verwalten lassen
+# =============================================================================
+data/tajik_corpus.txt
+tajik_corpus/corpus/master.json
+tajik_poetry_library/
+snapshots/
+/exports/
+uploads/

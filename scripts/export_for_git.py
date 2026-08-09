@@ -12,6 +12,9 @@ Verwendung:
 Die bereinigten Dateien werden in tajik_corpus/contributions_public/ gespeichert.
 Die Originaldateien in tajik_corpus/contributions/ bleiben unverändert.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).parent.parent))
 
 import json
 import os
@@ -24,7 +27,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Pfade
-SCRIPT_DIR = Path(__file__).parent
+SCRIPT_DIR = Path(__file__).parent.parent
 CONTRIBUTIONS_LOCAL = SCRIPT_DIR / "tajik_corpus" / "contributions"
 CONTRIBUTIONS_PUBLIC = SCRIPT_DIR / "tajik_corpus" / "contributions_public"
 

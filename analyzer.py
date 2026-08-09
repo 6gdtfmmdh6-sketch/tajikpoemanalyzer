@@ -3740,7 +3740,13 @@ class EnhancedRadifDetector:
         
         # 2. Select best Radīf
         best_radif = self._select_best_radif(radif_candidates, lines)
-        
+
+        # Safety net: discard "radifs" that occur on fewer than 2 lines.
+        if best_radif:
+            occurrence = sum(1 for line in lines if line.strip().endswith(best_radif))
+            if occurrence < 2:
+                best_radif = ""
+
         # 3. Remove Radīf and prepare cleaned lines for meter analysis
         if best_radif:
             cleaned_lines = self._remove_radif(lines, best_radif)
@@ -3799,7 +3805,11 @@ class EnhancedRadifDetector:
                 ending = " ".join(words[-length:])
                 endings[ending] += 1
         
-        min_count = int(len(lines) * self.min_radif_frequency)
+        # A radif is by definition a repetition across verses: require at
+        # least 2 occurrences regardless of poem length (fixes false
+        # positives on free verse, where a single line ending was reported
+        # as a radif).
+        min_count = max(2, int(len(lines) * self.min_radif_frequency))
         significant = {e: c for e, c in endings.items() if c >= min_count}
         
         return significant
@@ -4177,7 +4187,13 @@ class ContentAnalyzer:
         persian_arabic_ratio = self._calculate_persian_arabic_ratio(words)
         
         # Primary theme
-        primary_theme = max(theme_distribution.items(), key=lambda x: x[1])[0] if theme_distribution else "Unknown"
+        # Only report a primary theme when at least one theme keyword was
+        # actually found; otherwise "Love" (the first dict key) was returned
+        # for every poem with zero theme hits.
+        if theme_distribution and max(theme_distribution.values()) > 0:
+            primary_theme = max(theme_distribution.items(), key=lambda x: x[1])[0]
+        else:
+            primary_theme = "Undetermined"
         
         return ContentAnalysis(
             word_frequencies=word_freq.most_common(20),
@@ -4192,25 +4208,53 @@ class ContentAnalyzer:
             persian_arabic_ratio=persian_arabic_ratio
         )
 
+    # Tajik nominal suffixes, longest first: plural+izofat combinations,
+    # plural, possessive enclitics, object marker, izofat, indefinite -e.
+    _STRIP_SUFFIXES = (
+        'ҳоямон', 'ҳоятон', 'ҳояшон',
+        'ҳоям', 'ҳоят', 'ҳояш', 'ҳои', 'ҳоро', 'ҳое', 'ҳо',
+        'амон', 'атон', 'ашон',
+        'ям', 'ят', 'яш', 'ам', 'ат', 'аш',
+        'еро', 'ро', 'ии', 'и', 'е',
+    )
+
+    def _lexicon_forms(self, word: str) -> Set[str]:
+        """Generate candidate base forms by iteratively stripping nominal
+        suffixes (izofat, plural, possessives, object marker). Surface forms
+        like 'ғамгини' (ғамгин + izofat) or 'гумкардаҳои' (гумкарда + plural
+        + izofat) previously produced false-positive neologisms because only
+        the inflected form was checked against the lexicon."""
+        forms = {word}
+        frontier = {word}
+        for _ in range(3):  # at most 3 stacked suffixes
+            next_frontier = set()
+            for w in frontier:
+                for suf in self._STRIP_SUFFIXES:
+                    if w.endswith(suf) and len(w) - len(suf) >= 3:
+                        stem = w[: -len(suf)]
+                        if stem not in forms:
+                            forms.add(stem)
+                            next_frontier.add(stem)
+            if not next_frontier:
+                break
+            frontier = next_frontier
+        return forms
+
     def _find_neologisms(self, words: List[str]) -> List[str]:
-        """Find neologisms (words not in standard lexicon)"""
+        """Find neologisms (words whose base form is not in the lexicon)"""
         if not self.lexicon:
             logger.warning("No lexicon loaded - neologism detection disabled")
             return []
         
         neologisms = []
         for word in set(words):
-            if word not in self.lexicon and word not in self.archaisms:
-                # Filter out numbers and very short words
-                if not word.isdigit() and len(word) > 2:
-                    # Check for modern patterns
-                    for pattern in self.modern_patterns:
-                        if re.search(pattern, word):
-                            neologisms.append(word)
-                            break
-                    # Or just consider it a neologism if not in lexicon
-                    if word not in neologisms:
-                        neologisms.append(word)
+            if word.isdigit() or len(word) <= 2:
+                continue
+            # Known if any candidate base form is in lexicon or archaisms
+            forms = self._lexicon_forms(word)
+            if any(f in self.lexicon or f in self.archaisms for f in forms):
+                continue
+            neologisms.append(word)
         
         return sorted(neologisms)
 
@@ -4300,7 +4344,13 @@ class ContentAnalyzer:
 
 class LiteraryAssessor:
     """
-    Provides literary assessment from multiple perspectives.
+    EXPERIMENTAL HEURISTIC — not a validated instrument.
+
+    The scores produced here (german_perspective, persian_tradition,
+    tajik_elements, modernist_features, overall_quality) are rule-of-thumb
+    composites without any empirical grounding or inter-rater validation.
+    They MUST NOT be cited as measurements in academic work. Kept only for
+    exploratory sorting in the UI; treat as ordinal hints at best.
     """
     
     @staticmethod

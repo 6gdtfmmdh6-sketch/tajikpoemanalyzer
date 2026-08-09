@@ -2,6 +2,9 @@
 """
 Minimal API für Korpus-Zugriff vom Browser aus
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).parent.parent))
 from flask import Flask, jsonify
 from extended_corpus_manager import TajikLibraryManager
 import json

@@ -19,6 +19,9 @@ Option C: Create wrapper classes (backward compatible)
 
 This file demonstrates Option B (quick integration).
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).parent.parent))
 
 import sys
 from pathlib import Path

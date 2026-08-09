@@ -4,7 +4,7 @@ Test: Vollständiger Workflow-Test
 Testet ob Original-Analyzer + PDF-Handler zusammenarbeiten
 """
 
-from app2 import TajikPoemAnalyzer, AnalysisConfig, PoemData
+from analyzer import EnhancedTajikPoemAnalyzer as TajikPoemAnalyzer, AnalysisConfig, PoemData
 from pdf_handler import read_file_with_pdf_support
 from pathlib import Path
 

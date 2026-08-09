@@ -37,7 +37,6 @@ RUN mkdir -p /app/exports /app/uploads /app/tajik_corpus /app/tajik_poetry_libra
 EXPOSE 8501
 
 # Environment
-ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 

@@ -5,6 +5,9 @@ und erstellt anschließend die bereinigten öffentlichen Versionen.
 
 Dieses Skript wird einmalig ausgeführt.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).parent.parent))
 
 import json
 from pathlib import Path
