@@ -33,6 +33,8 @@ import tarfile
 import unicodedata
 from datetime import datetime, date
 from pathlib import Path
+from typing import Optional
+from typing import Optional
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("knowledge_export")
@@ -46,12 +48,15 @@ SNAPSHOT_DIR = ROOT / "snapshots"
 SNAPSHOT_PATHS = [
     "tajik_corpus",
     "tajik_poetry_library",
-    "data/dilorom_soliboeva_tufonhoi_sokit.txt",
+    "data/dilorom_*.txt",   # all textual witnesses (T, B, E, K)
     "data/poems.txt",
     "data/shahnama.txt",
-    "data/tajik_corpus.txt",
+    "data/themes.json",
     "exports",
 ]
+
+# Excluded from snapshots by default: derivable or huge (word list ~400 MB).
+SNAPSHOT_EXCLUDE_LARGE = ["data/tajik_corpus.txt", "data/tajik_lexicon.json"]
 
 # Fields that may never appear in a public export.
 PRIVATE_POEM_FIELDS = {"text", "raw_text", "normalized_text", "lines", "body"}
@@ -88,7 +93,7 @@ def _strip_private(obj):
 
 
 def export_public_features(master_path: Path = MASTER,
-                           out_path: Path | None = None) -> Path:
+                           out_path: Optional[Path] = None) -> Path:
     """Create the copyright-safe public feature export from master.json."""
     if not master_path.exists():
         raise FileNotFoundError(f"{master_path} not found")
@@ -149,11 +154,17 @@ def export_snapshot(out_dir: Path = SNAPSHOT_DIR) -> Path:
                 "contents": [], "tool": "knowledge_export.py"}
 
     with tarfile.open(out_path, "w:gz") as tar:
-        for rel in SNAPSHOT_PATHS:
-            p = ROOT / rel
-            if p.exists():
-                tar.add(p, arcname=rel)
-                manifest["contents"].append(rel)
+        for pattern in SNAPSHOT_PATHS:
+            matches = sorted(ROOT.glob(pattern)) if "*" in pattern else [ROOT / pattern]
+            if "*" in pattern and not matches:
+                logger.warning("No match for snapshot pattern: %s", pattern)
+            for p in matches:
+                if not p.exists():
+                    logger.warning("Missing from snapshot: %s", p.name)
+                    continue
+                rel_name = str(p.relative_to(ROOT))
+                tar.add(p, arcname=rel_name)
+                manifest["contents"].append(rel_name)
         manifest_bytes = json.dumps(manifest, indent=1).encode("utf-8")
         info = tarfile.TarInfo("SNAPSHOT_MANIFEST.json")
         info.size = len(manifest_bytes)
