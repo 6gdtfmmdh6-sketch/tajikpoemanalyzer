@@ -40,44 +40,29 @@ def init_library_state():
 
 
 def load_existing_contributions() -> Tuple[List[Dict], Dict[str, List[Dict]]]:
-    """Load existing contributions and group them by batch."""
-    contributions = []
-    batches = {}
-    corpus_dir = Path("./tajik_corpus/contributions")
-    
-    if corpus_dir.exists():
-        for file in sorted(corpus_dir.glob("*.json")):
-            try:
-                with open(file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    data['_filepath'] = str(file)
-                    contributions.append(data)
-                    
-                    batch_id = data.get('upload_batch_id')
-                    source_filename = data.get('source_filename', 'Unknown')
-                    
-                    if batch_id:
-                        if batch_id not in batches:
-                            batches[batch_id] = {
-                                'poems': [],
-                                'source_filename': source_filename,
-                                'batch_id': batch_id
-                            }
-                        batches[batch_id]['poems'].append(data)
-                    else:
-                        if '_ungrouped_' not in batches:
-                            batches['_ungrouped_'] = {
-                                'poems': [],
-                                'source_filename': 'Individual poems',
-                                'batch_id': '_ungrouped_'
-                            }
-                        batches['_ungrouped_']['poems'].append(data)
-                        
-            except Exception as e:
-                logger.error(f"Error loading {file}: {e}")
-    
-    return contributions, batches
+    """Load poems from the unified corpus, grouped by work.
 
+    Batches used to mean "one upload file"; grouping by work is the
+    meaningful unit now that every poem carries a source.
+    """
+    try:
+        from corpus_core import Corpus
+        corpus = Corpus()
+        contributions = corpus.as_contributions()
+    except Exception as e:
+        logger.error(f"Could not load corpus: {e}")
+        return [], {}
+
+    batches: Dict[str, Dict] = {}
+    for data in contributions:
+        wid = data.get('upload_batch_id') or '_ungrouped_'
+        batch = batches.setdefault(wid, {
+            'poems': [],
+            'source_filename': data.get('source_filename', 'Unknown'),
+            'batch_id': wid,
+        })
+        batch['poems'].append(data)
+    return contributions, batches
 
 def save_contribution_metadata(filepath: str, metadata: Dict) -> bool:
     """Update metadata in existing contribution file"""

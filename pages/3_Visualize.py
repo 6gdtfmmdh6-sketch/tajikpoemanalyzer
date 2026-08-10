@@ -87,24 +87,17 @@ def init_viz_state():
 
 
 def load_all_contributions() -> List[Dict]:
-    """Load all contributions"""
-    contributions = []
-    contrib_dir = Path("tajik_corpus/contributions")
-    
-    if not contrib_dir.exists():
-        return contributions
-    
-    for file in sorted(contrib_dir.glob("*.json")):
-        try:
-            with open(file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                data['_filepath'] = str(file)
-                contributions.append(data)
-        except Exception as e:
-            logger.error(f"Error loading {file}: {e}")
-    
-    return contributions
+    """Load poems from the unified corpus.
 
+    Previously read tajik_corpus/contributions/*.json, which the single-write
+    corpus path no longer produces; the page silently showed nothing.
+    """
+    try:
+        from corpus_core import Corpus
+        return Corpus().as_contributions()
+    except Exception as e:
+        logger.error(f"Could not load corpus: {e}")
+        return []
 
 def extract_word_frequencies(text: str, top_n: int = 100) -> List[tuple]:
     """Extract word frequencies from text"""

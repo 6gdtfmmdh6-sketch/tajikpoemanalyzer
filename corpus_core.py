@@ -357,6 +357,66 @@ class Corpus:
         return out
 
 
+    # ------------------------------------------------ compatibility layer
+
+    def as_contributions(self) -> List[Dict]:
+        """Yield corpus poems in the shape the older UI pages expect.
+
+        Library, Visualize and Corpus were written against
+        `tajik_corpus/contributions/*.json`, a per-poem file dump the new
+        single-write path no longer produces. Rather than duplicate storage,
+        the corpus projects itself into that shape on read. Batches now group
+        by work, which is more meaningful than by upload file.
+        """
+        out: List[Dict] = []
+        for p in self.data["poems"]:
+            work = self.work_of(p)
+            author = self.data["authors"].get(p["author_id"], {})
+            out.append({
+                "contribution_id": p["id"],
+                "poem_id": p["id"],
+                "title": p.get("title", ""),
+                "raw_text": p.get("text", ""),
+                "normalized_text": p.get("text", ""),
+                "analysis": p.get("analysis", {}),
+                "features": p.get("features", {}),
+                "attestations": p.get("attestations", []),
+                "tags": self._tags_for(p),
+                "upload_batch_id": p.get("work_id"),
+                "source_filename": work.get("title", "unknown"),
+                "volume_metadata": {
+                    "author": author.get("name"),
+                    "collection": work.get("title"),
+                    "year": work.get("publication_year") or work.get("composition_year"),
+                    "publisher": work.get("publisher"),
+                    "source_type": work.get("source_type"),
+                    "is_draft": work.get("is_draft", False),
+                },
+                "metadata": {
+                    "volume_title": work.get("title"),
+                    "volume_year": work.get("publication_year"),
+                    "content_hash": p.get("text_sha256", "")[:16],
+                    "contributor": p.get("contributor", {"anonymous": True}),
+                },
+            })
+        return out
+
+    @staticmethod
+    def _tags_for(poem: Dict) -> List[str]:
+        f = poem.get("features", {})
+        tags = []
+        if f.get("meter") and f["meter"] != "unknown":
+            tags.append(f"meter:{f['meter']}")
+        if f.get("stanza_form"):
+            tags.append(f"form:{f['stanza_form']}")
+        if f.get("meter_status"):
+            tags.append(f"status:{f['meter_status']}")
+        for theme in (f.get("themes") or {}):
+            tags.append(f"theme:{theme.lower()}")
+        if f.get("has_radif"):
+            tags.append("radif")
+        return tags
+
 # ------------------------------------------------------------------ features
 
 def extract_features(analysis: Dict) -> Dict:

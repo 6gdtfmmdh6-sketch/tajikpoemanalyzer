@@ -101,24 +101,14 @@ def export_for_git() -> str:
 
 def export_plaintext_corpus(output_path: str) -> int:
     """Export corpus as plaintext for NLP training"""
-    contrib_dir = Path("tajik_corpus/contributions")
-    
-    if not contrib_dir.exists():
-        return 0
-    
+    from corpus_core import Corpus
     texts = []
     count = 0
-    
-    for file in contrib_dir.glob("*.json"):
-        try:
-            with open(file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                text = data.get('raw_text', data.get('normalized_text', ''))
-                if text:
-                    texts.append(text)
-                    count += 1
-        except Exception as e:
-            logger.error(f"Error reading {file}: {e}")
+    for data in Corpus().as_contributions():
+        text = data.get('raw_text') or data.get('normalized_text') or ''
+        if text:
+            texts.append(text)
+            count += 1
     
     # Write combined text
     with open(output_path, 'w', encoding='utf-8') as f:
@@ -129,27 +119,23 @@ def export_plaintext_corpus(output_path: str) -> int:
 
 def export_jsonl_corpus(output_path: str) -> int:
     """Export corpus as JSONL for ML training"""
-    contrib_dir = Path("tajik_corpus/contributions")
-    
-    if not contrib_dir.exists():
-        return 0
-    
+    from corpus_core import Corpus
     count = 0
-    
+
     with open(output_path, 'w', encoding='utf-8') as out:
-        for file in contrib_dir.glob("*.json"):
+        for data in Corpus().as_contributions():
             try:
-                with open(file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
                 
                 # Create training record
                 record = {
                     'text': data.get('raw_text', ''),
                     'metadata': {
-                        'author': data.get('metadata', {}).get('author', ''),
-                        'year': data.get('metadata', {}).get('publication_year', ''),
-                        'collection': data.get('metadata', {}).get('collection', ''),
+                        'author': data.get('volume_metadata', {}).get('author', ''),
+                        'year': data.get('volume_metadata', {}).get('year', ''),
+                        'collection': data.get('volume_metadata', {}).get('collection', ''),
+                        'source_type': data.get('volume_metadata', {}).get('source_type', ''),
                     },
+                    'features': data.get('features', {}),
                     'tags': data.get('tags', [])
                 }
                 
@@ -157,7 +143,7 @@ def export_jsonl_corpus(output_path: str) -> int:
                 count += 1
                 
             except Exception as e:
-                logger.error(f"Error processing {file}: {e}")
+                logger.error(f"Error processing {data.get('poem_id')}: {e}")
     
     return count
 

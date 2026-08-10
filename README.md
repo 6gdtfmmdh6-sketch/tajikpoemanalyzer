@@ -73,6 +73,27 @@ through the Analyze page — author and source are required fields — and your
 corpus grows in the same schema. `python knowledge_export.py features`
 regenerates the shareable layer; poem texts never leave your machine.
 
+## Analysis
+
+`corpus_analysis.py` (and the **Analysis** page) works on the flat `features`
+rows, so nothing re-runs the analyzer:
+
+* `profile_groups(corpus, by)` — descriptive profile per author, work,
+  source type, period or decade
+* `compare_groups(corpus, by, a, b)` — feature-by-feature comparison with
+  Welch's t and Cohen's d; refuses tests below n=5 and flags underpowered
+  comparisons instead of implying significance
+* `evolution(corpus, by)` — feature trajectories over time
+* `witness_divergence(corpus)` — every draft against the printing it
+  witnesses, paired poem by poem via `align_by_title` (exact-hash attestation
+  finds nothing there, because the wording is precisely what changed)
+* `attestation_report(corpus)` — texts carried by more than one source
+
+This replaces `analysis_tool.py`, which was a skeleton: three functions
+returning empty dicts, one defined twice, `Counter` never imported, `scipy`
+imported inside a function but absent from requirements, and a data path into
+the library schema that was never populated. Nothing imported it.
+
 ## Repository layout
 
 - `analyzer.py` — core analysis (to be split into a package; see Roadmap)
