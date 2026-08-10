@@ -1,7 +1,7 @@
 {
  "metadata": {
   "export_type": "public_features",
-  "export_date": "2026-08-10T09:34:27",
+  "export_date": "2026-08-10T09:34:48",
   "note": "Derived data only. Poem texts are identified by SHA-256 hash and incipit; full texts are not part of this export.",
   "license": "CC-BY-4.0 (derived data)"
  },
