@@ -52,6 +52,7 @@ except ImportError as e:
 # Import Corpus Manager
 try:
     from corpus_manager import TajikCorpusManager
+    from corpus_core import Corpus, SOURCE_TYPES
     CORPUS_MANAGER_AVAILABLE = True
     logger.info("Corpus Manager loaded successfully")
 except ImportError as e:
@@ -525,17 +526,30 @@ def display_corpus_section():
     
     col1, col2 = st.columns(2)
     with col1:
-        author = st.text_input("Author", key="corpus_author", placeholder="e.g. Dilorom Soliboeva")
-        collection = st.text_input("Collection/Volume Title", key="corpus_collection", placeholder="e.g. Tufonhoi sokit")
+        author = st.text_input("Author *", key="corpus_author", placeholder="e.g. Dilorom Soliboeva")
+        collection = st.text_input("Source / Volume Title *", key="corpus_collection", placeholder="e.g. Tufonhoi sokit")
+        source_type = st.selectbox("Source type", SOURCE_TYPES, index=0, key="corpus_source_type",
+                                   help="How the text circulated: printed, samizdat, manuscript, "
+                                        "periodical, online, oral.")
     with col2:
-        year = st.number_input("Publication Year", min_value=1900, max_value=2030, value=2000, key="corpus_year")
+        year = st.number_input("Publication year", min_value=1900, max_value=2030, value=2000, key="corpus_year")
+        comp_year = st.number_input("Year written (0 = unknown)", min_value=0, max_value=2030, value=0,
+                                    key="corpus_comp_year",
+                                    help="For samizdat and manuscripts this often precedes publication "
+                                         "by years. The timeline uses this when set.")
         publisher = st.text_input("Publisher", key="corpus_publisher", placeholder="e.g. Adib")
+    is_draft = st.checkbox("This source is a draft / working version", key="corpus_is_draft")
+
+    if not author or not collection:
+        st.warning("Author and source title are required — poems without them cannot be "
+                   "compared, grouped or placed on the timeline.")
     
     st.markdown("---")
     
     # Save button
-    if st.button("Save All to Library", type="primary", key="btn_corpus_save"):
-        corpus_manager = TajikCorpusManager()
+    if st.button("Save All to Library", type="primary", key="btn_corpus_save",
+                 disabled=not (author and collection)):
+        corpus = Corpus()
         saved = 0
         errors = []
         
@@ -556,31 +570,27 @@ def display_corpus_section():
                     first_line = result['poem_text'].split('\n')[0].strip()
                     title = first_line[:50] if len(first_line) > 50 else first_line
                     
-                    # Prepare contribution with batch info
-                    contribution = corpus_manager.prepare_contribution(
-                        analysis_result={
-                            "poem_id": f"P{result['poem_num']:03d}",
-                            "title": title,
-                            "content": result['poem_text'],
-                            "analysis": result['analysis'],
-                            "validation": result['analysis'].quality_metrics
+                    from dataclasses import asdict as _asdict
+                    import json as _json
+                    analysis = _json.loads(_json.dumps(_asdict(result['analysis']), default=str))
+
+                    corpus.add_poem(
+                        title=title,
+                        text=result['poem_text'],
+                        author=author,
+                        work_title=collection,
+                        work_kw={
+                            "source_type": source_type,
+                            "publication_year": int(year) if year else None,
+                            "composition_year": int(comp_year) or None,
+                            "is_draft": bool(is_draft),
+                            "publisher": publisher or None,
                         },
-                        raw_text=result['poem_text'],
-                        user_info={"anonymous": True}
+                        analysis=analysis,
+                        contributor={"anonymous": True,
+                                     "source_filename": source_filename,
+                                     "batch_id": batch_id},
                     )
-                    
-                    # ADD batch info and metadata to contribution
-                    contribution['source_filename'] = source_filename
-                    contribution['upload_batch_id'] = batch_id
-                    contribution['volume_metadata'] = volume_metadata
-                    
-                    # Update metadata section too
-                    if 'metadata' in contribution:
-                        contribution['metadata']['volume_title'] = collection
-                        contribution['metadata']['volume_year'] = year
-                    
-                    # Save
-                    corpus_manager.save_contribution(contribution)
                     saved += 1
                     
                 except Exception as e:
@@ -588,6 +598,7 @@ def display_corpus_section():
                     errors.append(f"Poem {result['poem_num']}: {str(e)}")
         
         if saved > 0:
+            corpus.save()
             st.session_state.corpus_saved = True
             st.session_state.batch_metadata = {
                 'batch_id': batch_id,

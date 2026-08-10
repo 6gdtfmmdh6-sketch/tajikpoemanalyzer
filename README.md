@@ -35,6 +35,44 @@ archive only within a defined research group (cf. § 60d UrhG), never publicly.
 **One-time cleanup:** old commits still contain full texts. Run
 `scripts/purge_history.sh` (requires `git-filter-repo`), then force-push.
 
+## Corpus model (v3)
+
+One corpus layer, `corpus_core.py`. It replaces the earlier split between
+`corpus_manager.py` (analysis path, no author field) and
+`extended_corpus_manager.py` (rich schema, never populated) — the two wrote to
+different files, and the poorer one won, so every poem was stored authorless.
+
+    Author  — a person who writes; name variants, life dates
+    Work    — a bounded source: printed volume, samizdat notebook, manuscript,
+              periodical, online account. Carries BOTH publication_year and
+              composition_year, plus source_type and draft/witness links
+    Poem    — a text in a Work by an Author, with `features` (flat, queryable)
+              and `analysis` (full record)
+
+Design decisions worth knowing:
+
+* **Attestations, not duplicates.** The same text in a second work is recorded
+  as an additional attestation. The old manager dropped it, discarding exactly
+  the information textual criticism needs.
+* **`meter_status`** separates `free_verse` (no metre by design) from
+  `detection_failed` (the detector gave up). "unknown" conflated opposites.
+* **Title variants** are merged through an explicit alias table
+  (`scripts/migrate_corpus.py`), never by fuzzy cross-script guessing.
+* **MTLD is persisted.** The analyzer stores it under the misleading name
+  `lexical_diversity`; it is now written to `features.mtld`.
+
+Migration from the old schema: `python scripts/migrate_corpus.py --dry-run`,
+then without the flag.
+
+## For other researchers
+
+Clone the repo and you get a working analysis environment plus the shared
+feature layer (`tajik_corpus/exports/features_public.json`): authors, works,
+timeline, and per-poem measurements, with no poem texts. Add your own texts
+through the Analyze page — author and source are required fields — and your
+corpus grows in the same schema. `python knowledge_export.py features`
+regenerates the shareable layer; poem texts never leave your machine.
+
 ## Repository layout
 
 - `analyzer.py` — core analysis (to be split into a package; see Roadmap)

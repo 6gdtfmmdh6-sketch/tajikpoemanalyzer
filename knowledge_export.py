@@ -40,12 +40,14 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("knowledge_export")
 
 ROOT = Path(__file__).parent
-MASTER = ROOT / "tajik_corpus" / "corpus" / "master.json"
+CORPUS = ROOT / "tajik_corpus" / "corpus" / "corpus.json"
+MASTER = CORPUS  # backwards-compatible alias
 EXPORT_DIR = ROOT / "tajik_corpus" / "exports"
 SNAPSHOT_DIR = ROOT / "snapshots"
 
 # Everything that constitutes the private research state.
 SNAPSHOT_PATHS = [
+    "tajik_corpus/corpus/corpus.json",
     "tajik_corpus",
     "tajik_poetry_library",
     "data/dilorom_*.txt",   # all textual witnesses (T, B, E, K)
@@ -60,6 +62,38 @@ SNAPSHOT_EXCLUDE_LARGE = ["data/tajik_corpus.txt", "data/tajik_lexicon.json"]
 
 # Fields that may never appear in a public export.
 PRIVATE_POEM_FIELDS = {"text", "raw_text", "normalized_text", "lines", "body"}
+
+# The per-poem `analysis` block is NOT publishable as-is. Two of its fields
+# carry the wording itself: `rhyme_scheme` lists the final word of every line
+# in order, and `content.word_frequencies` is a full bag of words. Together
+# they reconstruct a usable skeleton of the poem. The public export therefore
+# ships the aggregated `features` row plus a numeric whitelist only.
+PUBLIC_ANALYSIS_KEYS = {
+    "structural": {"syllables_per_line", "avg_syllables", "syllable_std_dev",
+                   "prosodic_consistency", "stanza_structure", "rhyme_pattern",
+                   "is_free_verse", "free_verse_confidence", "meter_confidence"},
+    "quality_metrics": {"quality_score", "reliability", "free_verse_analysis"},
+}
+# Words rarer than this are dropped from the shared frequency list: hapax
+# legomena are what make a text identifiable.
+VOCAB_MIN_COUNT = 3
+
+
+def _public_analysis(analysis: dict) -> dict:
+    out = {}
+    for section, allowed in PUBLIC_ANALYSIS_KEYS.items():
+        block = analysis.get(section) or {}
+        kept = {k: v for k, v in block.items() if k in allowed}
+        if kept:
+            out[section] = kept
+    aruz = (analysis.get("structural") or {}).get("aruz_analysis") or {}
+    if aruz:
+        out.setdefault("structural", {})["aruz_analysis"] = {
+            k: v for k, v in aruz.items()
+            if k in {"identified_meter", "confidence", "pattern_accuracy",
+                     "detected_pattern", "expected_pattern"}
+        }
+    return out
 
 
 def _normalize(text: str) -> str:
@@ -103,11 +137,24 @@ def export_public_features(master_path: Path = MASTER,
     for poem in master.get("poems", []):
         full_text = poem.get("text", "")
         clean = _strip_private(poem)
-        clean["text_sha256"] = text_hash(full_text) if full_text else None
-        clean["incipit"] = _incipit(full_text)
+        clean["text_sha256"] = poem.get("text_sha256") or (
+            text_hash(full_text) if full_text else None)
+        clean["incipit"] = poem.get("incipit") or _incipit(full_text)
+        if "analysis" in clean:
+            clean["analysis"] = _public_analysis(clean["analysis"])
         poems_out.append(clean)
 
+    # Authors and works travel with the data: without them the feature rows
+    # cannot be grouped, compared or placed in time by anyone downstream.
+    try:
+        from corpus_core import Corpus
+        c = Corpus(ROOT / "tajik_corpus")
+        stats, timeline = c.statistics(), c.timeline()
+    except Exception:                                        # pragma: no cover
+        stats, timeline = master.get("statistics", {}), []
+
     public = {
+        "schema_version": master.get("schema_version", "3.0.0"),
         "metadata": {
             **master.get("metadata", {}),
             "export_type": "public_features",
@@ -117,11 +164,12 @@ def export_public_features(master_path: Path = MASTER,
                      "of this export."),
             "license": "CC-BY-4.0 (derived data)",
         },
-        "statistics": master.get("statistics", {}),
-        "vocabulary": master.get("vocabulary", {}),
-        "aruz_distribution": master.get("aruz_distribution", {}),
-        "theme_distribution": master.get("theme_distribution", {}),
-        "radif_collection": master.get("radif_collection", {}),
+        "statistics": stats,
+        "timeline": timeline,
+        "authors": master.get("authors", {}),
+        "works": master.get("works", {}),
+        "vocabulary": {w: c for w, c in (master.get("vocabulary") or {}).items()
+                       if c >= VOCAB_MIN_COUNT},
         "poems": poems_out,
     }
 
@@ -138,6 +186,15 @@ def export_public_features(master_path: Path = MASTER,
         if leaked:
             out_path.unlink()
             raise RuntimeError(f"Private fields leaked into export: {leaked}")
+        analysis = poem.get("analysis") or {}
+        for section in analysis.values():
+            if not isinstance(section, dict):
+                continue
+            for bad in ("rhyme_scheme", "word_frequencies", "radif_words",
+                        "neologisms", "archaisms"):
+                if bad in section:
+                    out_path.unlink()
+                    raise RuntimeError(f"Wording-bearing field leaked: {bad}")
 
     logger.info("Public feature export: %s (%d poems, no full texts)",
                 out_path, len(poems_out))
