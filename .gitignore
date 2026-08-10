@@ -89,9 +89,7 @@ tajik_corpus/contributions_backup/
 # - data/tajik_corpus.txt (Wortliste)
 # - data/themes.json (Themen-Konfiguration)
 # - tajik_corpus/contributions_public/ (bereinigte Analysen ohne Volltext)
-# - tajik_corpus/corpus/master.json
-tajik_corpus/corpus/corpus.json
-tajik_corpus/corpus/*.tmp (aggregierte Wortdaten)
+# - tajik_corpus/corpus/master.json (aggregierte Wortdaten)
 # =============================================================================
 
 # =============================================================================
