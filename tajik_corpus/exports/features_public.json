@@ -8,7 +8,7 @@
   "description": "Tajik poetry research corpus",
   "updated": "2026-08-10T09:36:18",
   "export_type": "public_features",
-  "export_date": "2026-08-10T09:36:18",
+  "export_date": "2026-08-10T21:10:44",
   "note": "Derived data only. Poem texts are identified by SHA-256 hash and incipit; full texts are not part of this export.",
   "license": "CC-BY-4.0 (derived data)"
  },
